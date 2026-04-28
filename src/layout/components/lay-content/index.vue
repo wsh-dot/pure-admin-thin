@@ -5,12 +5,14 @@ import { useTags } from "@/layout/hooks/useTag";
 import { useGlobal, isNumber } from "@pureadmin/utils";
 import BackTopIcon from "@/assets/svg/back_top.svg?component";
 import { h, computed, Transition, defineComponent } from "vue";
+import { useRoute } from "vue-router";
 import { usePermissionStoreHook } from "@/store/modules/permission";
 
 const props = defineProps({
   fixedHeader: Boolean
 });
 
+const route = useRoute();
 const { showModel } = useTags();
 const { $storage, $config } = useGlobal<GlobalPropertiesApi>();
 
@@ -30,6 +32,10 @@ const hideTabs = computed(() => {
 
 const hideFooter = computed(() => {
   return $storage?.configure.hideFooter;
+});
+
+const pageHideFooter = computed(() => {
+  return route.meta?.hideFooter === true;
 });
 
 const stretch = computed(() => {
@@ -158,7 +164,7 @@ const transitionMain = defineComponent({
                   />
                 </transitionMain>
               </div>
-              <LayFooter v-if="!hideFooter" />
+              <LayFooter v-if="!hideFooter && !pageHideFooter" />
             </el-scrollbar>
             <div v-else class="grow">
               <transitionMain :route="route">
@@ -188,7 +194,7 @@ const transitionMain = defineComponent({
     </router-view>
 
     <!-- 页脚 -->
-    <LayFooter v-if="!hideFooter && !fixedHeader" />
+    <LayFooter v-if="!hideFooter && !pageHideFooter && !fixedHeader" />
   </section>
 </template>
 
