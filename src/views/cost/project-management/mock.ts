@@ -9,6 +9,8 @@ import type {
 
 export const stageOptions: WorkbenchStageOption[] = [
   { key: "budget", label: "施工图预算" },
+  { key: "investmentEstimate", label: "投资估算" },
+  { key: "preliminaryEstimate", label: "初设概算" },
   { key: "tenderControl", label: "招标控制价" },
   { key: "settlement", label: "工程结算" },
   { key: "indicator", label: "造价指标" }
@@ -474,51 +476,67 @@ const indicatorRows: WorkbenchRow[] = [
   }
 ];
 
+const budgetStageColumns = [
+  ...baseColumns,
+  reviewColumnGroup([
+    {
+      id: "suppliedEquipmentFee",
+      title: "其中甲供设备费",
+      field: "suppliedEquipmentFee",
+      minWidth: 138,
+      align: "right" as const
+    },
+    {
+      id: "suppliedMaterialFee",
+      title: "其中甲供主材费",
+      field: "suppliedMaterialFee",
+      minWidth: 138,
+      align: "right" as const
+    }
+  ]),
+  {
+    id: "otherFee",
+    title: "其他费用",
+    field: "otherFee",
+    minWidth: 100,
+    align: "right" as const
+  },
+  {
+    id: "totalCost",
+    title: "总造价",
+    field: "totalCost",
+    minWidth: 100,
+    align: "right" as const
+  },
+  {
+    id: "vat",
+    title: "增值税",
+    field: "vat",
+    minWidth: 100,
+    align: "right" as const
+  }
+];
+
 export const stageConfigs: WorkbenchStageConfig[] = [
   {
     key: "budget",
     label: "施工图预算",
     expandAll: true,
-    columns: [
-      ...baseColumns,
-      reviewColumnGroup([
-        {
-          id: "suppliedEquipmentFee",
-          title: "其中甲供设备费",
-          field: "suppliedEquipmentFee",
-          minWidth: 138,
-          align: "right" as const
-        },
-        {
-          id: "suppliedMaterialFee",
-          title: "其中甲供主材费",
-          field: "suppliedMaterialFee",
-          minWidth: 138,
-          align: "right" as const
-        }
-      ]),
-      {
-        id: "otherFee",
-        title: "其他费用",
-        field: "otherFee",
-        minWidth: 100,
-        align: "right" as const
-      },
-      {
-        id: "totalCost",
-        title: "总造价",
-        field: "totalCost",
-        minWidth: 100,
-        align: "right" as const
-      },
-      {
-        id: "vat",
-        title: "增值税",
-        field: "vat",
-        minWidth: 100,
-        align: "right" as const
-      }
-    ],
+    columns: budgetStageColumns,
+    rows: budgetRows
+  },
+  {
+    key: "investmentEstimate",
+    label: "投资估算",
+    expandAll: true,
+    columns: budgetStageColumns,
+    rows: budgetRows
+  },
+  {
+    key: "preliminaryEstimate",
+    label: "初设概算",
+    expandAll: true,
+    columns: budgetStageColumns,
     rows: budgetRows
   },
   {

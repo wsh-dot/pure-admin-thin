@@ -1,5 +1,7 @@
 export type WorkbenchStageKey =
   | "budget"
+  | "investmentEstimate"
+  | "preliminaryEstimate"
   | "tenderControl"
   | "settlement"
   | "indicator";

@@ -52,6 +52,16 @@ import Refresh from "~icons/ri/refresh-line";
 import Eye from "~icons/ri/eye-line";
 import Pdf from "~icons/ri/file-pdf-2-line";
 import Settings3 from "~icons/ri/settings-3-line";
+import ArrowRightS from "~icons/ri/arrow-right-s-line";
+import FileAdd from "~icons/ri/file-add-line";
+import FileCopy from "~icons/ri/file-copy-2-line";
+import Scissors from "~icons/ri/scissors-cut-line";
+import Clipboard from "~icons/ri/clipboard-line";
+import DeleteBin from "~icons/ri/delete-bin-line";
+import UploadCloud from "~icons/ri/upload-cloud-line";
+import Lock from "~icons/ri/lock-line";
+import LockUnlock from "~icons/ri/lock-unlock-line";
+import Palette from "~icons/ri/palette-line";
 
 defineOptions({
   name: "ProjectManagementWorkbench"
@@ -175,6 +185,14 @@ const costFileCategoryOrder = [
 
 type CostFileCategoryKey = (typeof costFileCategoryOrder)[number];
 
+interface ContextMenuItem {
+  key: string;
+  label: string;
+  icon?: any;
+  disabled?: boolean;
+  children?: ContextMenuItem[];
+}
+
 const toolbarGroups = [
   [
     { key: "new", label: "新建", icon: Add },
@@ -233,6 +251,74 @@ const reportToolbarGroups = [
   ]
 ] as const;
 
+const projectContextMenuGroups: ContextMenuItem[][] = [
+  [
+    {
+      key: "new",
+      label: "新建",
+      children: [
+        { key: "new-project", label: "建设项目", icon: FileAdd },
+        {
+          key: "new-single",
+          label: "单项工程",
+          icon: FileCopy,
+          disabled: true
+        },
+        { key: "new-cost-file", label: "造价文件", icon: Save, disabled: true }
+      ]
+    }
+  ],
+  [
+    { key: "cut", label: "剪切", icon: Scissors, disabled: true },
+    { key: "copy", label: "复制", icon: FileCopy, disabled: true },
+    { key: "paste", label: "粘贴", icon: Clipboard, disabled: true },
+    { key: "delete", label: "删除", icon: DeleteBin, disabled: true },
+    { key: "restore-delete", label: "还原删除", disabled: true },
+    { key: "review-delete", label: "审核删除", disabled: true },
+    { key: "restore-review-delete", label: "恢复审核删除", disabled: true }
+  ],
+  [
+    { key: "renumber", label: "重新编号" },
+    { key: "unify-status", label: "统一项目状态", disabled: true },
+    {
+      key: "batch-template",
+      label: "批量取费模板",
+      disabled: true,
+      children: []
+    },
+    { key: "pricing-basis", label: "计价依据", disabled: true, children: [] },
+    { key: "update", label: "更新", children: [] }
+  ],
+  [
+    { key: "order", label: "顺序", disabled: true, children: [] },
+    { key: "level", label: "层次", disabled: true, children: [] }
+  ],
+  [
+    { key: "import-as-project", label: "导入为一级项目" },
+    { key: "import", label: "导入", children: [] },
+    { key: "export", label: "导出", disabled: true, children: [] },
+    { key: "choose-template", label: "选择典型工程模板" }
+  ],
+  [
+    { key: "upload", label: "上传", icon: UploadCloud, disabled: true },
+    { key: "column-show-hide", label: "列显示/隐藏" }
+  ],
+  [
+    { key: "view-save-path", label: "查看文件保存路径" },
+    { key: "sync-review-data", label: "同步项目审核甲供数据" },
+    { key: "get-review-data", label: "获取报审数据", disabled: true },
+    {
+      key: "display-settings",
+      label: "显示设置",
+      children: [
+        { key: "set-color", label: "设置颜色", icon: Palette },
+        { key: "lock-column", label: "锁定此列", icon: Lock },
+        { key: "unlock-column", label: "撤销列锁定", icon: LockUnlock }
+      ]
+    }
+  ]
+];
+
 const currentStage = ref<WorkbenchStageKey>("budget");
 const currentPanelTab = ref<"basic" | "audit">("basic");
 const activeMainTab = ref<(typeof workTabs)[number]>(workTabs[0]);
@@ -257,6 +343,13 @@ const createCostFileForm = reactive({
   quota: "",
   template: "",
   location: ""
+});
+const projectContextMenuRef = ref<HTMLElement | null>(null);
+const projectContextMenu = reactive({
+  visible: false,
+  x: 0,
+  y: 0,
+  activeSubmenuKey: ""
 });
 
 const editableStageConfigs = ref(
@@ -423,6 +516,60 @@ async function handleMainTableCellDblclick({
 }) {
   if (column?.field !== "pricingLib" || !isSecondLevelCostFile(row)) return;
   await openBudgetBookWorkspace(row);
+}
+
+function hideProjectContextMenu() {
+  projectContextMenu.visible = false;
+  projectContextMenu.activeSubmenuKey = "";
+}
+
+async function handleProjectContextMenu(event: MouseEvent) {
+  if (activeMainTab.value !== workTabs[0]) return;
+
+  projectContextMenu.visible = true;
+  projectContextMenu.activeSubmenuKey = "";
+  projectContextMenu.x = event.clientX;
+  projectContextMenu.y = event.clientY;
+
+  await nextTick();
+
+  const menuRect = projectContextMenuRef.value?.getBoundingClientRect();
+  const menuWidth = menuRect?.width ?? 226;
+  const menuHeight = menuRect?.height ?? 0;
+
+  projectContextMenu.x = Math.max(
+    8,
+    Math.min(event.clientX, window.innerWidth - menuWidth - 8)
+  );
+  projectContextMenu.y = Math.max(
+    8,
+    Math.min(event.clientY, window.innerHeight - menuHeight - 8)
+  );
+}
+
+function handleContextMenuAction(item: ContextMenuItem) {
+  if (item.disabled) return;
+
+  if (item.children) {
+    projectContextMenu.activeSubmenuKey =
+      projectContextMenu.activeSubmenuKey === item.key ? "" : item.key;
+    return;
+  }
+
+  hideProjectContextMenu();
+
+  if (item.key === "new-project") {
+    handleCreateCommand("project");
+    return;
+  }
+
+  message(`${item.label}功能暂未接入，当前为原型实现`, { type: "info" });
+}
+
+function handleContextMenuItemEnter(item: ContextMenuItem) {
+  if (item.children) {
+    projectContextMenu.activeSubmenuKey = item.key;
+  }
 }
 
 function handleMainTabClick(tab: (typeof workTabs)[number] | string) {
@@ -741,12 +888,16 @@ async function restoreWorkbenchSnapshot() {
 onMounted(async () => {
   updateWorkbenchViewportHeight();
   window.addEventListener("resize", updateWorkbenchViewportHeight);
+  window.addEventListener("click", hideProjectContextMenu);
+  window.addEventListener("blur", hideProjectContextMenu);
   await nextTick();
   await restoreWorkbenchSnapshot();
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", updateWorkbenchViewportHeight);
+  window.removeEventListener("click", hideProjectContextMenu);
+  window.removeEventListener("blur", hideProjectContextMenu);
 });
 </script>
 
@@ -895,7 +1046,10 @@ onBeforeUnmount(() => {
             </button>
           </div>
 
-          <div class="table-surface">
+          <div
+            class="table-surface"
+            @contextmenu.prevent="handleProjectContextMenu"
+          >
             <vxe-table
               ref="mainTableRef"
               border
@@ -1033,6 +1187,72 @@ onBeforeUnmount(() => {
         </div>
       </template>
     </section>
+
+    <Teleport to="body">
+      <div
+        v-if="projectContextMenu.visible"
+        ref="projectContextMenuRef"
+        class="project-context-menu"
+        :style="{
+          left: `${projectContextMenu.x}px`,
+          top: `${projectContextMenu.y}px`
+        }"
+        @click.stop
+        @contextmenu.prevent.stop
+      >
+        <div
+          v-for="(group, groupIndex) in projectContextMenuGroups"
+          :key="groupIndex"
+          class="project-context-menu__group"
+        >
+          <div
+            v-for="item in group"
+            :key="item.key"
+            class="project-context-menu__item"
+            :class="{
+              'is-disabled': item.disabled,
+              'has-children': item.children,
+              'is-open': projectContextMenu.activeSubmenuKey === item.key
+            }"
+            role="menuitem"
+            tabindex="-1"
+            @click="handleContextMenuAction(item)"
+            @mouseenter="handleContextMenuItemEnter(item)"
+          >
+            <span class="project-context-menu__icon">
+              <component :is="item.icon" v-if="item.icon" />
+            </span>
+            <span class="project-context-menu__label">{{ item.label }}</span>
+            <span v-if="item.children" class="project-context-menu__arrow">
+              <ArrowRightS />
+            </span>
+
+            <div
+              v-if="item.children?.length"
+              class="project-context-menu project-context-menu--submenu"
+              :class="`project-context-menu--submenu-${item.key}`"
+            >
+              <div
+                v-for="child in item.children"
+                :key="child.key"
+                class="project-context-menu__item"
+                :class="{ 'is-disabled': child.disabled }"
+                role="menuitem"
+                tabindex="-1"
+                @click.stop="handleContextMenuAction(child)"
+              >
+                <span class="project-context-menu__icon">
+                  <component :is="child.icon" v-if="child.icon" />
+                </span>
+                <span class="project-context-menu__label">{{
+                  child.label
+                }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <el-dialog
       v-model="reportConfirmDialogVisible"
@@ -1326,7 +1546,7 @@ onBeforeUnmount(() => {
   flex: 1;
   align-items: center;
   justify-content: center;
-  min-height: 126px;
+  min-height: 96px;
   padding: 12px 6px;
   color: #436180;
   letter-spacing: 0.2em;
@@ -1334,12 +1554,19 @@ onBeforeUnmount(() => {
   background: linear-gradient(180deg, #fff 0%, #f2f8ff 100%);
   border: 1px solid #d9e6f4;
   border-radius: 18px;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
   transition:
     border-color 0.2s ease,
     background 0.2s ease,
     color 0.2s ease;
+
+  span {
+    font-size: 13px;
+    line-height: 1;
+    word-break: keep-all;
+    white-space: nowrap;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+  }
 
   &.is-active {
     color: #fff;
@@ -1387,6 +1614,95 @@ onBeforeUnmount(() => {
 .table-surface {
   height: calc(100% - 54px);
   padding: 0 14px 14px;
+}
+
+.project-context-menu {
+  position: fixed;
+  z-index: 40;
+  width: 226px;
+  padding: 4px 0;
+  font-size: 15px;
+  color: #111827;
+  background: #fff;
+  border: 1px solid #1e9cff;
+  box-shadow: 0 8px 18px rgb(25 77 128 / 16%);
+}
+
+.project-context-menu__group {
+  padding: 4px 0;
+  border-bottom: 1px solid #e4e7ed;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.project-context-menu__item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) 18px;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 8px 0 10px;
+  line-height: 30px;
+  cursor: default;
+  user-select: none;
+
+  &:hover {
+    background: #e7f3ff;
+  }
+
+  &.is-disabled {
+    color: #9ca3af;
+
+    &:hover {
+      background: transparent;
+    }
+  }
+}
+
+.project-context-menu__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  color: #7b8794;
+}
+
+.project-context-menu__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-context-menu__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 16px;
+  color: #6b7280;
+}
+
+.project-context-menu--submenu {
+  position: absolute;
+  top: -5px;
+  left: calc(100% - 1px);
+  display: none;
+  width: max-content;
+  min-width: 128px;
+}
+
+.project-context-menu--submenu-display-settings {
+  top: auto;
+  bottom: -5px;
+}
+
+.project-context-menu__item.has-children:hover > .project-context-menu--submenu,
+.project-context-menu__item.has-children.is-open
+  > .project-context-menu--submenu {
+  display: block;
 }
 
 :deep(.table-surface .vxe-table--render-default) {
