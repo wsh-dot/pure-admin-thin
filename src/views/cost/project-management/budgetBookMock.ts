@@ -2404,6 +2404,66 @@ function createListPricingDetailStateMap() {
   };
 }
 
+function createListPricingMeasureDetailStateMap() {
+  const measureProjectState: BudgetBookNodeDetailState = {
+    mode: "parent-only",
+    defaultTab: "labor",
+    visibleTabs: ["labor"],
+    laborRows: cloneRows(parentLaborRowsTemplate),
+    mainMaterialRows: [],
+    formulaRows: [],
+    formulaUnit: "",
+    feeProgramRows: [],
+    feeRateRows: [],
+    extraFeeRows: [],
+    quotaContent: { heading: "", description: "" }
+  };
+
+  const measureListState: BudgetBookNodeDetailState = {
+    mode: "tabbed",
+    defaultTab: "labor",
+    visibleTabs: [
+      "labor",
+      "mainMaterial",
+      "featureContent",
+      "formula",
+      "feeProgram",
+      "listPricingRule"
+    ],
+    laborRows: [],
+    mainMaterialRows: [],
+    formulaRows: cloneRows(formulaRowsTemplate),
+    formulaUnit: "台",
+    feeProgramRows: cloneTreeRows(feeProgramRowsTemplate),
+    feeRateRows: cloneRows(feeRateRowsTemplate),
+    extraFeeRows: [],
+    quotaContent: { heading: "", description: "" },
+    featureRows: cloneRows(listFeatureRowsTemplate),
+    workContentRows: cloneRows(listWorkContentRowsTemplate),
+    listPricingRule: "按措施项目清单规则计算"
+  };
+
+  const measureDivisionState: BudgetBookNodeDetailState = {
+    mode: "tabbed",
+    defaultTab: "labor",
+    visibleTabs: ["labor", "mainMaterial"],
+    laborRows: [],
+    mainMaterialRows: [],
+    formulaRows: [],
+    formulaUnit: "",
+    feeProgramRows: [],
+    feeRateRows: [],
+    extraFeeRows: [],
+    quotaContent: { heading: "", description: "" }
+  };
+
+  return {
+    "measure-root": measureProjectState,
+    "measure-list-item": measureListState,
+    "measure-division": measureDivisionState
+  };
+}
+
 export function buildBudgetBookWorkspaceContext(
   routeInfo: BudgetBookRoutePayload
 ): BudgetBookWorkspaceContext {
@@ -2487,6 +2547,7 @@ export function buildBudgetBookWorkspaceContext(
     listPricingMainColumns,
     listPricingMeasureColumns,
     listPricingMeasureRows: cloneTreeRows(listPricingMeasureRowsTemplate),
+    listPricingMeasureDetailStateMap: createListPricingMeasureDetailStateMap(),
     listPricingOtherLeftRows: cloneTreeRows(listPricingOtherLeftRowsTemplate),
     listPricingOtherRightColumns,
     listPricingOtherRightRows: cloneTreeRows(listPricingOtherRightRowsTemplate),

@@ -42,6 +42,8 @@ const router = useRouter();
 
 const DEFAULT_DETAIL_HEIGHT = 360;
 const DEFAULT_FEE_RATE_HEIGHT = 180;
+const CONTEXT_MENU_VIEWPORT_GAP = 8;
+const CONTEXT_MENU_SUBMENU_RESERVE_WIDTH = 360;
 
 interface BudgetContextMenuItem {
   key: string;
@@ -53,7 +55,7 @@ interface BudgetContextMenuItem {
   children?: BudgetContextMenuItem[];
 }
 
-type PricingLibraryTabKey = "quota" | "resource" | "indicator";
+type PricingLibraryTabKey = "template" | "quota" | "resource" | "indicator";
 
 interface PricingLibraryTreeNode {
   id: string;
@@ -82,6 +84,7 @@ interface PricingLibraryTableRow {
 
 const pricingLibraryTabs: Array<{ key: PricingLibraryTabKey; label: string }> =
   [
+    { key: "template", label: "清单模板" },
     { key: "quota", label: "定额库" },
     { key: "resource", label: "工料机库" },
     { key: "indicator", label: "指标库" }
@@ -157,6 +160,34 @@ const indicatorTreeNodes: PricingLibraryTreeNode[] = [
       { id: "indicator-14", label: "第十四章 站场建筑工程" },
       { id: "indicator-15", label: "第十五章 站场数字化工程" },
       { id: "indicator-16", label: "第十六章 分布式光伏发电工程" }
+    ]
+  }
+];
+
+const templateTreeNodes: PricingLibraryTreeNode[] = [
+  {
+    id: "template-root",
+    label: "炼油化工清单计算规则",
+    children: [
+      { id: "template-0201", label: "0201 静置设备安装工程" },
+      { id: "template-0202", label: "0202 机械设备安装工程" },
+      { id: "template-0203", label: "0203 工业炉工程" },
+      { id: "template-0204", label: "0204 金属罐、气柜、钢结构安装工程" },
+      { id: "template-0205", label: "0205 工艺管道安装工程" },
+      { id: "template-0206", label: "0206 电气安装工程" },
+      { id: "template-0207", label: "0207 通信安装工程" },
+      {
+        id: "template-0208",
+        label: "0208 自控仪表安装工程",
+        active: true
+      },
+      { id: "template-0209", label: "0209 给排水及消防安装工程" },
+      { id: "template-0210", label: "0210 采暖通风安装工程" },
+      { id: "template-0211", label: "0211 热工安装工程" },
+      { id: "template-0212", label: "0212 分析化验" },
+      { id: "template-0213", label: "0213 催化剂及化学药剂工程" },
+      { id: "template-0214", label: "0214 劳动安全卫生" },
+      { id: "template-0215", label: "0215 措施项目" }
     ]
   }
 ];
@@ -385,7 +416,6 @@ let pageHeightFrame = 0;
 const activeMainTab = ref("budget");
 const pricingMode = ref<BudgetBookPricingMode>("quota");
 const selectedNodeId = ref("");
-const selectedMeasureRowId = ref("");
 const selectedOtherLeftRowId = ref("");
 const selectedOtherRightRowId = ref("");
 const activeDetailTab = ref<BudgetBookDetailTabKey>("labor");
@@ -398,6 +428,8 @@ const budgetContextMenu = reactive({
   visible: false,
   x: 0,
   y: 0,
+  anchorX: 0,
+  anchorY: 0,
   activeSubmenuKey: ""
 });
 const workspaceContext = ref<BudgetBookWorkspaceContext>(
@@ -425,7 +457,7 @@ const feeMainLowerResize = useVerticalPanelResize({
   minRemainingHeight: 8
 });
 
-const budgetContextMenuGroups: BudgetContextMenuItem[][] = [
+const quotaBudgetContextMenuGroups: BudgetContextMenuItem[][] = [
   [
     {
       key: "select",
@@ -591,6 +623,282 @@ const budgetContextMenuGroups: BudgetContextMenuItem[][] = [
   ]
 ];
 
+const listDivisionContextMenuGroups: BudgetContextMenuItem[][] = [
+  [
+    {
+      key: "select",
+      label: "选择",
+      children: [
+        { key: "select-list", label: "清单" },
+        { key: "select-supplement-list", label: "补充清单" },
+        { key: "select-quota", label: "定额" },
+        { key: "select-resource", label: "工料机" }
+      ]
+    },
+    {
+      key: "add",
+      label: "增加",
+      children: [
+        { key: "add-division", label: "分部", icon: "ri:organization-chart" },
+        { key: "add-list", label: "清单", icon: "ri:file-list-3-line" },
+        { key: "add-quota", label: "定额", icon: "ri:calendar-check-line" },
+        { key: "add-labor", label: "人工", icon: "ri:registered-line" },
+        { key: "add-material", label: "材料", icon: "ri:copyright-line" },
+        { key: "add-machine", label: "机械", icon: "ri:registered-line" },
+        { key: "add-main-material", label: "主材", icon: "ri:alphabet-z" },
+        { key: "add-equipment", label: "设备", icon: "ri:alphabet-s" }
+      ]
+    }
+  ],
+  [
+    {
+      key: "cut",
+      label: "剪切",
+      icon: "ri:scissors-cut-line",
+      shortcut: "Ctrl+X"
+    },
+    {
+      key: "copy",
+      label: "复制",
+      icon: "ri:file-copy-2-line",
+      shortcut: "Ctrl+C"
+    },
+    {
+      key: "paste",
+      label: "粘贴",
+      icon: "ri:clipboard-line",
+      shortcut: "Ctrl+V"
+    },
+    {
+      key: "delete",
+      label: "删除",
+      icon: "ri:delete-bin-line",
+      shortcut: "Delete"
+    },
+    { key: "restore", label: "恢复", disabled: true },
+    { key: "temp-delete", label: "临时删除" },
+    { key: "cancel-temp-delete", label: "取消临时删除" },
+    { key: "delete-all-temp", label: "删除所有临时删除项" }
+  ],
+  [
+    { key: "merge-quota-quantity", label: "合并定额工程量" },
+    { key: "list-work-content", label: "清单工程内容设置" },
+    {
+      key: "resource-price",
+      label: "工料机价格",
+      submenuPlacement: "bottom",
+      children: [
+        { key: "import-unit-price", label: "导入单价文件" },
+        { key: "cancel-child-price", label: "取消子目单价" }
+      ]
+    }
+  ],
+  [
+    {
+      key: "save-to",
+      label: "保存到",
+      submenuPlacement: "bottom",
+      children: [
+        { key: "save-quota-lib", label: "我的定额库", disabled: true },
+        { key: "save-resource-lib", label: "我的工料机库", disabled: true },
+        { key: "save-list-lib", label: "我的清单库" },
+        { key: "save-division-template", label: "我的分项模板" }
+      ]
+    },
+    {
+      key: "import-export",
+      label: "导入/导出",
+      submenuPlacement: "bottom",
+      children: [
+        { key: "block-import", label: "块导入", icon: "ri:login-box-line" },
+        { key: "block-export", label: "块导出", icon: "ri:logout-box-line" },
+        { key: "import-project-list", label: "导入工程量清单" },
+        { key: "export-project-list", label: "导出工程量清单" },
+        {
+          key: "import-division-calc",
+          label: "导入分部分项工程项目清单与计价表"
+        },
+        { key: "import-calc-table", label: "导入工程量计算表" },
+        { key: "import-quantity-list", label: "导入算量清单" }
+      ]
+    }
+  ],
+  [
+    {
+      key: "batch",
+      label: "批量",
+      submenuPlacement: "bottom",
+      children: [
+        {
+          key: "batch-fee-category",
+          label: "设置取费类别",
+          children: [{ key: "batch-fee-category-install", label: "安装工程" }]
+        },
+        { key: "batch-coeff", label: "工程量乘系数" },
+        {
+          key: "batch-coeff-convert",
+          label: "批量系数换算",
+          icon: "ri:exchange-line"
+        },
+        { key: "set-child-fee", label: "设置子目增加费" },
+        { key: "cancel-child-fee", label: "取消子目增加费" },
+        { key: "expand-child-fee", label: "扩展子目增加费" },
+        { key: "cancel-selected-quota-fee", label: "取消选中定额增加费" },
+        { key: "restore-selected-quota-fee", label: "恢复选中定额增加费" }
+      ]
+    },
+    {
+      key: "quota",
+      label: "定额",
+      submenuPlacement: "bottom",
+      children: [
+        { key: "refresh-quota", label: "刷新定额" },
+        { key: "refresh-quota-with-price", label: "刷新定额（包括定额价）" },
+        { key: "cancel-selected-quota-adjust", label: "取消选中定额调整" },
+        { key: "cancel-all-quota-adjust", label: "取消所有定额调整" },
+        { key: "replace-quota", label: "定额替换" }
+      ]
+    },
+    {
+      key: "check",
+      label: "检查",
+      submenuPlacement: "bottom",
+      children: [
+        { key: "check-quantity-negative", label: "检查工程量为负" },
+        { key: "check-labor-consume-negative", label: "检查人材机消耗为负" }
+      ]
+    },
+    {
+      key: "display-settings",
+      label: "显示内容",
+      submenuPlacement: "bottom",
+      children: [
+        { key: "set-color", label: "设置颜色" },
+        { key: "column-show-hide", label: "列显示/隐藏" },
+        {
+          key: "show-review-mark",
+          label: "显示审核标记",
+          icon: "ri:checkbox-line"
+        }
+      ]
+    },
+    {
+      key: "precision-settings",
+      label: "计算精度设置",
+      submenuPlacement: "bottom",
+      children: [
+        { key: "current-file-precision", label: "设置当前文件精度" },
+        { key: "system-calculation-precision", label: "系统计算精度" }
+      ]
+    }
+  ],
+  [
+    { key: "lock-column", label: "锁定在此列", icon: "ri:lock-line" },
+    {
+      key: "unlock-column",
+      label: "撤销列锁定",
+      icon: "ri:lock-unlock-line",
+      disabled: true
+    }
+  ]
+];
+
+const listMeasureContextMenuGroups: BudgetContextMenuItem[][] = [
+  listDivisionContextMenuGroups[0],
+  [
+    {
+      key: "cut",
+      label: "剪切",
+      icon: "ri:scissors-cut-line",
+      shortcut: "Ctrl+X"
+    },
+    {
+      key: "copy",
+      label: "复制",
+      icon: "ri:file-copy-2-line",
+      shortcut: "Ctrl+C"
+    },
+    {
+      key: "paste",
+      label: "粘贴",
+      icon: "ri:clipboard-line",
+      shortcut: "Ctrl+V"
+    },
+    {
+      key: "delete",
+      label: "删除",
+      icon: "ri:delete-bin-line",
+      shortcut: "Delete"
+    },
+    { key: "restore", label: "恢复", disabled: true }
+  ],
+  [
+    { key: "list-work-content", label: "清单工程内容设置" },
+    { key: "save-template", label: "保存模板", icon: "ri:login-box-line" },
+    { key: "apply-template", label: "套用模板", icon: "ri:logout-box-line" },
+    listDivisionContextMenuGroups[2][2]
+  ],
+  listDivisionContextMenuGroups[3],
+  [
+    listDivisionContextMenuGroups[4][0],
+    listDivisionContextMenuGroups[4][1],
+    listDivisionContextMenuGroups[4][2],
+    {
+      ...listDivisionContextMenuGroups[4][3],
+      label: "显示设置"
+    },
+    listDivisionContextMenuGroups[4][4]
+  ],
+  listDivisionContextMenuGroups[5]
+];
+
+const listOtherContextMenuGroups: BudgetContextMenuItem[][] = [
+  [
+    { key: "add-child-item", label: "增加子项", icon: "ri:add-box-line" },
+    {
+      key: "add-after-item",
+      label: "增加后项",
+      icon: "ri:add-box-line",
+      disabled: true
+    }
+  ],
+  [
+    {
+      key: "copy",
+      label: "复制",
+      icon: "ri:file-copy-2-line",
+      shortcut: "Ctrl+C",
+      disabled: true
+    },
+    {
+      key: "cut",
+      label: "剪切",
+      icon: "ri:scissors-cut-line",
+      shortcut: "Ctrl+X",
+      disabled: true
+    },
+    {
+      key: "paste",
+      label: "粘贴",
+      icon: "ri:clipboard-line",
+      shortcut: "Ctrl+V",
+      disabled: true
+    },
+    {
+      key: "delete",
+      label: "删除",
+      icon: "ri:delete-bin-line",
+      shortcut: "Delete",
+      disabled: true
+    },
+    { key: "restore", label: "恢复", disabled: true }
+  ],
+  [
+    { key: "save-template", label: "保存模板", icon: "ri:login-box-line" },
+    { key: "apply-template", label: "套用模板", icon: "ri:logout-box-line" }
+  ]
+];
+
 const selectedDetailRowIds = reactive({
   labor: "",
   mainMaterial: "",
@@ -635,12 +943,16 @@ const visibleMainTabs = computed(() =>
 );
 const currentMainRows = computed(() =>
   pricingMode.value === "list"
-    ? workspaceContext.value.listPricingRows
+    ? activeMainTab.value === "listMeasures"
+      ? workspaceContext.value.listPricingMeasureRows
+      : workspaceContext.value.listPricingRows
     : workspaceContext.value.rows
 );
 const currentMainColumns = computed(() =>
   pricingMode.value === "list"
-    ? workspaceContext.value.listPricingMainColumns
+    ? activeMainTab.value === "listMeasures"
+      ? workspaceContext.value.listPricingMeasureColumns
+      : workspaceContext.value.listPricingMainColumns
     : workspaceContext.value.mainColumns
 );
 const showBudgetShortcuts = computed(() => activeMainTab.value === "budget");
@@ -650,19 +962,44 @@ const showListDivisionShortcuts = computed(
 const showPricingShortcuts = computed(
   () => showBudgetShortcuts.value || showListDivisionShortcuts.value
 );
+const currentShortcutLinks = computed(() => {
+  if (!showListDivisionShortcuts.value)
+    return workspaceContext.value.shortcutLinks;
+
+  return workspaceContext.value.shortcutLinks.map(link =>
+    link === "定额计价" ? "清单计价" : link
+  );
+});
+const currentBudgetContextMenuGroups = computed<BudgetContextMenuItem[][]>(
+  () => {
+    if (pricingMode.value === "quota" && activeMainTab.value === "budget")
+      return quotaBudgetContextMenuGroups;
+
+    if (pricingMode.value !== "list") return [];
+
+    if (activeMainTab.value === "listDivision")
+      return listDivisionContextMenuGroups;
+    if (activeMainTab.value === "listMeasures")
+      return listMeasureContextMenuGroups;
+    if (activeMainTab.value === "listOther") return listOtherContextMenuGroups;
+
+    return [];
+  }
+);
 const isBudgetMainWorkspace = computed(() => {
   if (pricingMode.value === "list")
-    return activeMainTab.value === "listDivision";
+    return (
+      activeMainTab.value === "listDivision" ||
+      activeMainTab.value === "listMeasures"
+    );
 
   return activeMainTab.value === "budget";
 });
-const isMeasureWorkspace = computed(
-  () => pricingMode.value === "list" && activeMainTab.value === "listMeasures"
-);
 const isOtherWorkspace = computed(
   () => pricingMode.value === "list" && activeMainTab.value === "listOther"
 );
 const currentPricingTreeNodes = computed(() => {
+  if (activePricingLibraryTab.value === "template") return templateTreeNodes;
   if (activePricingLibraryTab.value === "resource") return resourceTreeNodes;
   if (activePricingLibraryTab.value === "indicator") return indicatorTreeNodes;
   return quotaTreeNodes;
@@ -673,6 +1010,10 @@ const currentPricingRows = computed(() => {
   return quotaRows;
 });
 const pricingLibraryTitle = computed(() => {
+  if (activePricingLibraryTab.value === "template") {
+    return "模板 炼油化工清单计算规则";
+  }
+
   if (activePricingLibraryTab.value === "resource") {
     return "工料机 石油建设安装工程预算定额（2022版） 工料机库";
   }
@@ -683,6 +1024,9 @@ const pricingLibraryTitle = computed(() => {
 
   return "定额 石油建设安装工程预算定额（2022版）";
 });
+const pricingLibraryDialogTitle = computed(() =>
+  pricingMode.value === "list" ? "清单计价" : "定额计价"
+);
 const detailPanelStyle = computed(() => {
   return {
     gridTemplateRows: `minmax(0px, 1fr) 8px ${detailResize.panelHeight.value}px`
@@ -699,21 +1043,27 @@ const feeMainLeftStyle = computed(() => {
   };
 });
 
-const selectedNode = computed<BudgetBookTreeRow | null>(() => {
-  return (
-    currentMainRows.value.find(item => item.id === selectedNodeId.value) ??
-    currentMainRows.value[0] ??
-    null
-  );
-});
+const selectedNode = computed<BudgetBookTreeRow | BudgetBookPlainRow | null>(
+  () => {
+    return (
+      currentMainRows.value.find(item => item.id === selectedNodeId.value) ??
+      currentMainRows.value[0] ??
+      null
+    );
+  }
+);
 const currentDetailState = computed(() => {
   const defaultNodeId =
     pricingMode.value === "list"
-      ? workspaceContext.value.listPricingRows[0]?.id
+      ? activeMainTab.value === "listMeasures"
+        ? workspaceContext.value.listPricingMeasureRows[0]?.id
+        : workspaceContext.value.listPricingRows[0]?.id
       : workspaceContext.value.defaultNodeId;
   const stateMap =
     pricingMode.value === "list"
-      ? workspaceContext.value.listPricingDetailStateMap
+      ? activeMainTab.value === "listMeasures"
+        ? workspaceContext.value.listPricingMeasureDetailStateMap
+        : workspaceContext.value.listPricingDetailStateMap
       : workspaceContext.value.detailStateMap;
 
   return (
@@ -814,8 +1164,6 @@ watch(
     );
     pricingMode.value = "quota";
     selectedNodeId.value = workspaceContext.value.defaultNodeId;
-    selectedMeasureRowId.value =
-      workspaceContext.value.listPricingMeasureRows[0]?.id ?? "";
     selectedOtherLeftRowId.value =
       workspaceContext.value.listPricingOtherLeftRows[0]?.id ?? "";
     selectedOtherRightRowId.value =
@@ -937,8 +1285,6 @@ function handleToolbarAction(label: string, key = "") {
       pricingMode.value === "list"
         ? (workspaceContext.value.listPricingRows[0]?.id ?? "")
         : workspaceContext.value.defaultNodeId;
-    selectedMeasureRowId.value =
-      workspaceContext.value.listPricingMeasureRows[0]?.id ?? "";
     selectedOtherLeftRowId.value =
       workspaceContext.value.listPricingOtherLeftRows[0]?.id ?? "";
     selectedOtherRightRowId.value =
@@ -957,9 +1303,9 @@ function handleToolbarAction(label: string, key = "") {
     return;
   }
 
-  if (label === "定额计价") {
+  if (label === "定额计价" || label === "清单计价") {
     pricingLibraryDialogVisible.value = true;
-    activePricingLibraryTab.value = "quota";
+    activePricingLibraryTab.value = label === "清单计价" ? "template" : "quota";
     return;
   }
 
@@ -984,11 +1330,22 @@ function handleMainTabClick(key: string) {
       if (key === "listDivision") {
         selectedNodeId.value =
           workspaceContext.value.listPricingRows[0]?.id ?? "";
-        activeDetailTab.value =
-          currentDetailState.value?.defaultTab ??
-          visibleDetailTabs.value[0]?.key ??
-          "labor";
-        syncDetailSelectionRows();
+      }
+
+      if (key === "listMeasures") {
+        selectedNodeId.value =
+          workspaceContext.value.listPricingMeasureRows[0]?.id ?? "";
+      }
+
+      if (key === "listDivision" || key === "listMeasures") {
+        activeDetailTab.value = "labor";
+        void nextTick(() => {
+          activeDetailTab.value =
+            currentDetailState.value?.defaultTab ??
+            visibleDetailTabs.value[0]?.key ??
+            "labor";
+          syncDetailSelectionRows();
+        });
       }
 
       return;
@@ -1010,12 +1367,12 @@ function handleMainTabClick(key: string) {
   });
 }
 
-function handleMainRowSelect({ row }: { row: BudgetBookTreeRow }) {
+function handleMainRowSelect({
+  row
+}: {
+  row: BudgetBookTreeRow | BudgetBookPlainRow;
+}) {
   selectedNodeId.value = row.id;
-}
-
-function handleMeasureRowSelect({ row }: { row: BudgetBookPlainRow }) {
-  selectedMeasureRowId.value = row.id;
 }
 
 function handleOtherLeftRowSelect({ row }: { row: BudgetBookPlainRow }) {
@@ -1075,28 +1432,42 @@ function hideBudgetContextMenu() {
   budgetContextMenu.activeSubmenuKey = "";
 }
 
-async function handleBudgetContextMenu(event: MouseEvent) {
-  if (activeMainTab.value !== "budget") return;
-
-  budgetContextMenu.visible = true;
-  budgetContextMenu.activeSubmenuKey = "";
-  budgetContextMenu.x = event.clientX;
-  budgetContextMenu.y = event.clientY;
-
-  await nextTick();
-
+function adjustBudgetContextMenuPosition(shouldReserveSubmenu = false) {
   const menuRect = budgetContextMenuRef.value?.getBoundingClientRect();
   const menuWidth = menuRect?.width ?? 262;
   const menuHeight = menuRect?.height ?? 0;
+  const submenuReserve = shouldReserveSubmenu
+    ? CONTEXT_MENU_SUBMENU_RESERVE_WIDTH
+    : 0;
 
   budgetContextMenu.x = Math.max(
-    8,
-    Math.min(event.clientX, window.innerWidth - menuWidth - 8)
+    CONTEXT_MENU_VIEWPORT_GAP,
+    Math.min(
+      budgetContextMenu.anchorX,
+      window.innerWidth - menuWidth - submenuReserve - CONTEXT_MENU_VIEWPORT_GAP
+    )
   );
   budgetContextMenu.y = Math.max(
-    8,
-    Math.min(event.clientY, window.innerHeight - menuHeight - 8)
+    CONTEXT_MENU_VIEWPORT_GAP,
+    Math.min(
+      budgetContextMenu.anchorY,
+      window.innerHeight - menuHeight - CONTEXT_MENU_VIEWPORT_GAP
+    )
   );
+}
+
+async function handleBudgetContextMenu(event: MouseEvent) {
+  if (!currentBudgetContextMenuGroups.value.length) return;
+
+  budgetContextMenu.visible = true;
+  budgetContextMenu.activeSubmenuKey = "";
+  budgetContextMenu.anchorX = event.clientX;
+  budgetContextMenu.anchorY = event.clientY;
+  budgetContextMenu.x = budgetContextMenu.anchorX;
+  budgetContextMenu.y = budgetContextMenu.anchorY;
+
+  await nextTick();
+  adjustBudgetContextMenuPosition(false);
 }
 
 function handleBudgetContextMenuAction(item: BudgetContextMenuItem) {
@@ -1115,6 +1486,9 @@ function handleBudgetContextMenuAction(item: BudgetContextMenuItem) {
 function handleBudgetContextMenuItemEnter(item: BudgetContextMenuItem) {
   if (item.children) {
     budgetContextMenu.activeSubmenuKey = item.key;
+    void nextTick(() => {
+      adjustBudgetContextMenuPosition(true);
+    });
   }
 }
 
@@ -1163,10 +1537,6 @@ function handleFeeMainHorizontalDividerMouseDown(event: MouseEvent) {
 
 function mainRowClassName({ row }: { row: { id: string } }) {
   return row.id === selectedNodeId.value ? "is-selected-row" : "";
-}
-
-function measureRowClassName({ row }: { row: { id: string } }) {
-  return row.id === selectedMeasureRowId.value ? "is-selected-row" : "";
 }
 
 function otherLeftRowClassName({ row }: { row: { id: string } }) {
@@ -1317,7 +1687,7 @@ onBeforeUnmount(() => {
             {{ badge }}
           </span>
           <button
-            v-for="link in workspaceContext.shortcutLinks"
+            v-for="link in currentShortcutLinks"
             :key="link"
             class="budget-shortcut-link"
             type="button"
@@ -1520,119 +1890,10 @@ onBeforeUnmount(() => {
       </div>
 
       <div
-        v-else-if="isMeasureWorkspace"
-        ref="contentSplitRef"
-        class="budget-content-grid"
-        :style="detailPanelStyle"
+        v-else-if="isOtherWorkspace"
+        class="other-project-workspace"
+        @contextmenu.prevent="handleBudgetContextMenu"
       >
-        <div class="budget-main-table-shell">
-          <vxe-table
-            border
-            round
-            size="small"
-            stripe
-            height="100%"
-            show-header-overflow="title"
-            :data="workspaceContext.listPricingMeasureRows"
-            :column-config="{ resizable: true }"
-            :tree-config="{
-              transform: true,
-              rowField: 'id',
-              parentField: 'parentId',
-              expandAll: true
-            }"
-            :row-config="{
-              isHover: true,
-              keyField: 'id'
-            }"
-            :row-class-name="measureRowClassName"
-            @cell-click="handleMeasureRowSelect"
-          >
-            <WorkbenchColumnNode
-              v-for="column in workspaceContext.listPricingMeasureColumns"
-              :key="column.id"
-              :column="column"
-            />
-          </vxe-table>
-        </div>
-
-        <div
-          class="budget-main-divider"
-          @mousedown.prevent="handleMainDividerMouseDown"
-        >
-          <span />
-        </div>
-
-        <div class="budget-detail-panel">
-          <div class="budget-detail-tabs">
-            <button class="budget-detail-tab is-active" type="button">
-              人材机
-            </button>
-
-            <div class="budget-detail-ops">
-              <template>
-                <button type="button" @click="handleToolbarAction('增加')">
-                  增
-                </button>
-                <button type="button" @click="handleToolbarAction('刷新')">
-                  R
-                </button>
-                <button type="button" @click="handleToolbarAction('校核')">
-                  C
-                </button>
-                <button type="button" @click="handleToolbarAction('联查')">
-                  J
-                </button>
-                <button
-                  type="button"
-                  @click="handleToolbarAction('选择工料机')"
-                >
-                  选择工料机
-                </button>
-              </template>
-
-              <button
-                class="budget-detail-collapse"
-                type="button"
-                title="收起区域"
-                @click="handleToolbarAction('收起区域')"
-              >
-                <IconifyIconOnline icon="ep:arrow-down" />
-              </button>
-            </div>
-          </div>
-
-          <div class="budget-detail-body">
-            <div class="detail-table-shell">
-              <vxe-table
-                border
-                round
-                size="small"
-                stripe
-                height="100%"
-                show-overflow="title"
-                :data="[]"
-                :row-config="{
-                  isHover: true,
-                  keyField: 'id'
-                }"
-              >
-                <WorkbenchColumnNode
-                  v-for="column in workspaceContext.laborColumns"
-                  :key="column.id"
-                  :column="column"
-                />
-              </vxe-table>
-            </div>
-          </div>
-
-          <div class="budget-detail-status">
-            项目编码：　合价：0　单价：0　人工费：0　材料费：0　机械费：0　管理费：0　利润：0
-          </div>
-        </div>
-      </div>
-
-      <div v-else-if="isOtherWorkspace" class="other-project-workspace">
         <div class="other-project-tree">
           <vxe-table
             border
@@ -2142,7 +2403,7 @@ onBeforeUnmount(() => {
         @contextmenu.prevent.stop
       >
         <div
-          v-for="(group, groupIndex) in budgetContextMenuGroups"
+          v-for="(group, groupIndex) in currentBudgetContextMenuGroups"
           :key="groupIndex"
           class="budget-context-menu__group"
         >
@@ -2183,7 +2444,10 @@ onBeforeUnmount(() => {
                 v-for="child in item.children"
                 :key="child.key"
                 class="budget-context-menu__item"
-                :class="{ 'is-disabled': child.disabled }"
+                :class="{
+                  'is-disabled': child.disabled,
+                  'has-children': child.children
+                }"
                 role="menuitem"
                 tabindex="-1"
                 @click.stop="handleBudgetContextMenuAction(child)"
@@ -2200,6 +2464,43 @@ onBeforeUnmount(() => {
                 >
                   {{ child.shortcut }}
                 </span>
+                <span
+                  v-else-if="child.children"
+                  class="budget-context-menu__arrow"
+                >
+                  <IconifyIconOnline icon="ri:arrow-right-s-line" />
+                </span>
+
+                <div
+                  v-if="child.children?.length"
+                  class="budget-context-menu budget-context-menu--submenu budget-context-menu--nested-submenu"
+                >
+                  <div
+                    v-for="grandChild in child.children"
+                    :key="grandChild.key"
+                    class="budget-context-menu__item"
+                    :class="{ 'is-disabled': grandChild.disabled }"
+                    role="menuitem"
+                    tabindex="-1"
+                    @click.stop="handleBudgetContextMenuAction(grandChild)"
+                  >
+                    <span class="budget-context-menu__icon">
+                      <IconifyIconOnline
+                        v-if="grandChild.icon"
+                        :icon="grandChild.icon"
+                      />
+                    </span>
+                    <span class="budget-context-menu__label">
+                      {{ grandChild.label }}
+                    </span>
+                    <span
+                      v-if="grandChild.shortcut"
+                      class="budget-context-menu__shortcut"
+                    >
+                      {{ grandChild.shortcut }}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -2217,7 +2518,7 @@ onBeforeUnmount(() => {
       align-center
     >
       <template #header>
-        <div class="pricing-library-title">定额计价</div>
+        <div class="pricing-library-title">{{ pricingLibraryDialogTitle }}</div>
       </template>
 
       <section class="pricing-library-shell">
@@ -2234,7 +2535,27 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <div class="pricing-library-filters">
+        <div
+          v-if="activePricingLibraryTab === 'template'"
+          class="pricing-library-filters pricing-library-template-filters"
+        >
+          <span>模板</span>
+          <el-select
+            size="small"
+            model-value="炼油化工清单计算规则"
+            class="pricing-template-select"
+          >
+            <el-option
+              label="炼油化工清单计算规则"
+              value="炼油化工清单计算规则"
+            />
+          </el-select>
+          <el-button size="small">添加选中</el-button>
+          <el-button size="small">展开</el-button>
+          <el-button size="small">收缩</el-button>
+        </div>
+
+        <div v-else class="pricing-library-filters">
           <template v-if="activePricingLibraryTab === 'indicator'">
             <span>年度:</span>
             <el-select
@@ -2265,7 +2586,13 @@ onBeforeUnmount(() => {
           </el-button>
         </div>
 
-        <div class="pricing-library-body">
+        <div
+          class="pricing-library-body"
+          :class="{
+            'pricing-library-body--template':
+              activePricingLibraryTab === 'template'
+          }"
+        >
           <aside class="pricing-library-left">
             <div class="pricing-library-search-tabs">
               <button class="is-active" type="button">章节查询</button>
@@ -2277,9 +2604,22 @@ onBeforeUnmount(() => {
                 v-for="node in currentPricingTreeNodes"
                 :key="node.id"
                 class="pricing-tree-node"
-                :class="{ 'is-active': node.active }"
+                :class="{
+                  'is-active': node.active,
+                  'pricing-tree-node--template':
+                    activePricingLibraryTab === 'template'
+                }"
               >
-                <IconifyIconOnline icon="ri:folder-open-line" />
+                <IconifyIconOnline
+                  v-if="activePricingLibraryTab !== 'template'"
+                  icon="ri:folder-open-line"
+                />
+                <el-checkbox
+                  v-else
+                  :model-value="false"
+                  size="small"
+                  @click.stop
+                />
                 <span>{{ node.label }}</span>
               </div>
 
@@ -2291,14 +2631,36 @@ onBeforeUnmount(() => {
                   v-for="child in node.children"
                   :key="child.id"
                   class="pricing-tree-node pricing-tree-node--child"
-                  :class="{ 'is-active': child.active }"
+                  :class="{
+                    'is-active': child.active,
+                    'pricing-tree-node--template':
+                      activePricingLibraryTab === 'template'
+                  }"
                 >
+                  <button
+                    v-if="
+                      activePricingLibraryTab === 'template' &&
+                      child.id !== 'template-0212' &&
+                      child.id !== 'template-0214'
+                    "
+                    class="pricing-tree-expand"
+                    type="button"
+                  >
+                    +
+                  </button>
                   <IconifyIconOnline
+                    v-if="activePricingLibraryTab !== 'template'"
                     :icon="
                       activePricingLibraryTab === 'resource'
                         ? 'ri:file-line'
                         : 'ri:folder-2-line'
                     "
+                  />
+                  <el-checkbox
+                    v-else
+                    :model-value="false"
+                    size="small"
+                    @click.stop
                   />
                   <span>{{ child.label }}</span>
                 </div>
@@ -2307,6 +2669,7 @@ onBeforeUnmount(() => {
           </aside>
 
           <main
+            v-if="activePricingLibraryTab !== 'template'"
             class="pricing-library-right"
             :class="{
               'pricing-library-right--table-only':
@@ -3260,6 +3623,23 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.pricing-library-template-filters {
+  gap: 6px;
+
+  :deep(.el-button) {
+    min-width: 52px;
+    padding: 0 8px;
+    color: #163a5c;
+    background: #f5f9fd;
+    border-color: #d4e2ec;
+    border-radius: 0;
+  }
+}
+
+.pricing-template-select {
+  width: min(420px, 55vw);
+}
+
 .pricing-library-select-arrow {
   width: 28px;
   min-width: 28px;
@@ -3272,6 +3652,20 @@ onBeforeUnmount(() => {
   grid-template-columns: 320px minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
+}
+
+.pricing-library-body--template {
+  display: block;
+
+  .pricing-library-left {
+    width: 100%;
+    height: 100%;
+    border-right: 0;
+  }
+
+  .pricing-library-tree {
+    padding: 12px 8px;
+  }
 }
 
 .pricing-library-left {
@@ -3346,6 +3740,31 @@ onBeforeUnmount(() => {
 
 .pricing-tree-node--child {
   padding-left: 20px;
+}
+
+.pricing-tree-node--template {
+  gap: 4px;
+  font-size: 16px;
+  color: #072441;
+
+  &.pricing-tree-node--child {
+    padding-left: 6px;
+  }
+}
+
+.pricing-tree-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  color: #236fb4;
+  cursor: default;
+  background: #f8fbff;
+  border: 1px solid #7fb0dc;
 }
 
 .pricing-library-right {
