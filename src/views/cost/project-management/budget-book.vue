@@ -959,6 +959,11 @@ const showBudgetShortcuts = computed(() => activeMainTab.value === "budget");
 const showListDivisionShortcuts = computed(
   () => pricingMode.value === "list" && activeMainTab.value === "listDivision"
 );
+const visiblePricingLibraryTabs = computed(() =>
+  showListDivisionShortcuts.value
+    ? pricingLibraryTabs
+    : pricingLibraryTabs.filter(tab => tab.key !== "template")
+);
 const showPricingShortcuts = computed(
   () => showBudgetShortcuts.value || showListDivisionShortcuts.value
 );
@@ -1313,6 +1318,11 @@ function handleToolbarAction(label: string, key = "") {
 }
 
 function handlePricingTabClick(key: PricingLibraryTabKey) {
+  if (key === "template" && !showListDivisionShortcuts.value) {
+    activePricingLibraryTab.value = "quota";
+    return;
+  }
+
   activePricingLibraryTab.value = key;
 }
 
@@ -2524,7 +2534,7 @@ onBeforeUnmount(() => {
       <section class="pricing-library-shell">
         <div class="pricing-library-tabs">
           <button
-            v-for="tab in pricingLibraryTabs"
+            v-for="tab in visiblePricingLibraryTabs"
             :key="tab.key"
             class="pricing-library-tab"
             :class="{ 'is-active': tab.key === activePricingLibraryTab }"
