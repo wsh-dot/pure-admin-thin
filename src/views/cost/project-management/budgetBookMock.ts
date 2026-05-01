@@ -6,12 +6,15 @@ import type {
   BudgetBookFeeMainSettingRow,
   BudgetBookFeeProgramRow,
   BudgetBookFeeRateRow,
+  BudgetBookFeatureRow,
   BudgetBookFormulaRow,
   BudgetBookLaborRow,
   BudgetBookMainMaterialRow,
   BudgetBookNodeDetailState,
+  BudgetBookPlainRow,
   BudgetBookQuotaContent,
   BudgetBookTreeRow,
+  BudgetBookWorkContentRow,
   BudgetBookWorkspaceContext
 } from "./budgetBookTypes";
 import type { BudgetBookRoutePayload } from "./workspaceState";
@@ -19,7 +22,13 @@ import type { BudgetBookRoutePayload } from "./workspaceState";
 const budgetBookNodeIds = {
   project: "budget-book-project",
   quota: "budget-book-quota",
-  mainMaterialLeaf: "budget-book-main-material-leaf"
+  mainMaterialLeaf: "budget-book-main-material-leaf",
+  listProject: "budget-book-list-project",
+  listDivision: "budget-book-list-division",
+  listSubDivision: "budget-book-list-sub-division",
+  listItem: "budget-book-list-item",
+  listQuota: "budget-book-list-quota",
+  listWorkContent: "budget-book-list-work-content"
 } as const;
 
 const mainColumns: WorkbenchColumn[] = [
@@ -150,6 +159,159 @@ const mainColumns: WorkbenchColumn[] = [
     align: "right"
   },
   { id: "remark", title: "备注", field: "remark", minWidth: 102 }
+];
+
+const listPricingMainColumns: WorkbenchColumn[] = [
+  {
+    id: "code",
+    title: "编号",
+    field: "code",
+    minWidth: 202,
+    treeNode: true
+  },
+  { id: "marker", title: "标识", field: "marker", width: 82, align: "center" },
+  { id: "name", title: "名称", field: "name", minWidth: 240 },
+  {
+    id: "projectFeature",
+    title: "项目特征",
+    field: "projectFeature",
+    minWidth: 230
+  },
+  {
+    id: "workContent",
+    title: "工作内容",
+    field: "workContent",
+    minWidth: 170
+  },
+  { id: "unit", title: "单位", field: "unit", width: 56, align: "center" },
+  {
+    id: "formula",
+    title: "工程量表达式",
+    field: "formula",
+    minWidth: 100
+  },
+  {
+    id: "quantity",
+    title: "工程量",
+    field: "quantity",
+    minWidth: 100,
+    align: "right"
+  },
+  { id: "price", title: "单价", field: "price", minWidth: 100, align: "right" },
+  {
+    id: "totalPrice",
+    title: "合价",
+    field: "totalPrice",
+    minWidth: 100,
+    align: "right"
+  },
+  { id: "feeCategory", title: "取费类别", field: "feeCategory", minWidth: 100 },
+  {
+    id: "laborTotal",
+    title: "人工合价",
+    field: "laborTotal",
+    minWidth: 100,
+    align: "right"
+  },
+  {
+    id: "materialTotal",
+    title: "材料合价",
+    field: "materialTotal",
+    minWidth: 100,
+    align: "right"
+  },
+  {
+    id: "machineTotal",
+    title: "机械合价",
+    field: "machineTotal",
+    minWidth: 100,
+    align: "right"
+  },
+  {
+    id: "mainMaterialTotal",
+    title: "主材合价",
+    field: "mainMaterialTotal",
+    minWidth: 100,
+    align: "right"
+  },
+  {
+    id: "equipmentTotal",
+    title: "设备合价",
+    field: "equipmentTotal",
+    minWidth: 100,
+    align: "right"
+  },
+  {
+    id: "managementTotal",
+    title: "管理费合价",
+    field: "managementTotal",
+    minWidth: 100,
+    align: "right"
+  },
+  {
+    id: "profitTotal",
+    title: "利润合价",
+    field: "profitTotal",
+    minWidth: 100,
+    align: "right"
+  },
+  { id: "remark", title: "备注", field: "remark", minWidth: 200 }
+];
+
+const listPricingMeasureColumns: WorkbenchColumn[] = [
+  { id: "code", title: "编号", field: "code", minWidth: 222, treeNode: true },
+  { id: "marker", title: "标识", field: "marker", width: 64, align: "center" },
+  { id: "name", title: "标题/名称", field: "name", minWidth: 240 },
+  { id: "unit", title: "单位", field: "unit", width: 72, align: "center" },
+  {
+    id: "quantityBase",
+    title: "取费基数/工程量",
+    field: "quantityBase",
+    minWidth: 142,
+    align: "right"
+  },
+  { id: "base", title: "计算基础", field: "base", minWidth: 112 },
+  { id: "rate", title: "费率(%)", field: "rate", width: 84, align: "right" },
+  { id: "price", title: "单价", field: "price", width: 72, align: "right" },
+  {
+    id: "totalPrice",
+    title: "合价",
+    field: "totalPrice",
+    width: 72,
+    align: "right"
+  },
+  { id: "feeCategory", title: "取费类别", field: "feeCategory", minWidth: 100 },
+  {
+    id: "measureCategory",
+    title: "措施类别",
+    field: "measureCategory",
+    minWidth: 100
+  },
+  { id: "cbsCode", title: "CBS编码", field: "cbsCode", minWidth: 100 },
+  { id: "remark", title: "备注", field: "remark", minWidth: 200 }
+];
+
+const listPricingOtherRightColumns: WorkbenchColumn[] = [
+  { id: "code", title: "编号", field: "code", minWidth: 150, treeNode: true },
+  { id: "name", title: "标题/名称", field: "name", minWidth: 210 },
+  { id: "unit", title: "单位", field: "unit", width: 64, align: "center" },
+  { id: "base", title: "计算基础", field: "base", minWidth: 150 },
+  { id: "rate", title: "费率(%)", field: "rate", width: 86, align: "right" },
+  {
+    id: "totalPrice",
+    title: "合价",
+    field: "totalPrice",
+    width: 80,
+    align: "right"
+  },
+  {
+    id: "nonCompetitive",
+    title: "不可竞争费",
+    field: "nonCompetitive",
+    width: 96,
+    align: "center"
+  },
+  { id: "remark", title: "备注", field: "remark", minWidth: 150 }
 ];
 
 const laborColumns: WorkbenchColumn[] = [
@@ -440,6 +602,372 @@ const budgetRowsTemplate: BudgetBookTreeRow[] = [
     machineTotal: "",
     mainMaterialTotal: "",
     equipmentTotal: "",
+    remark: ""
+  }
+];
+
+const listPricingRowsTemplate: BudgetBookTreeRow[] = [
+  {
+    id: budgetBookNodeIds.listProject,
+    parentId: null,
+    nodeType: "project",
+    code: "21",
+    marker: "工程",
+    name: "2",
+    projectFeature: "",
+    workContent: "",
+    unit: "",
+    formula: "",
+    quantity: "",
+    price: "",
+    totalPrice: "",
+    laborUnitPrice: "",
+    materialUnitPrice: "",
+    machineUnitPrice: "",
+    mainMaterialUnitPrice: "",
+    equipmentUnitPrice: "",
+    quotaInclusivePrice: "",
+    feeCategory: "",
+    feeTotal: "",
+    laborTotal: "",
+    materialTotal: "",
+    machineTotal: "",
+    mainMaterialTotal: "",
+    equipmentTotal: "",
+    managementTotal: "",
+    profitTotal: "",
+    remark: ""
+  },
+  {
+    id: budgetBookNodeIds.listDivision,
+    parentId: budgetBookNodeIds.listProject,
+    nodeType: "project",
+    code: "0201",
+    marker: "分部",
+    name: "静置设备安装工程",
+    projectFeature: "",
+    workContent: "",
+    unit: "",
+    formula: "",
+    quantity: "",
+    price: "",
+    totalPrice: "",
+    laborUnitPrice: "",
+    materialUnitPrice: "",
+    machineUnitPrice: "",
+    mainMaterialUnitPrice: "",
+    equipmentUnitPrice: "",
+    quotaInclusivePrice: "",
+    feeCategory: "",
+    feeTotal: "",
+    laborTotal: "",
+    materialTotal: "",
+    machineTotal: "",
+    mainMaterialTotal: "",
+    equipmentTotal: "",
+    managementTotal: "",
+    profitTotal: "",
+    remark: ""
+  },
+  {
+    id: budgetBookNodeIds.listSubDivision,
+    parentId: budgetBookNodeIds.listDivision,
+    nodeType: "project",
+    code: "020101",
+    marker: "分部",
+    name: "塔类",
+    projectFeature: "",
+    workContent: "",
+    unit: "",
+    formula: "",
+    quantity: "",
+    price: "",
+    totalPrice: "",
+    laborUnitPrice: "",
+    materialUnitPrice: "",
+    machineUnitPrice: "",
+    mainMaterialUnitPrice: "",
+    equipmentUnitPrice: "",
+    quotaInclusivePrice: "",
+    feeCategory: "",
+    feeTotal: "",
+    laborTotal: "",
+    materialTotal: "",
+    machineTotal: "",
+    mainMaterialTotal: "",
+    equipmentTotal: "",
+    managementTotal: "",
+    profitTotal: "",
+    remark: ""
+  },
+  {
+    id: budgetBookNodeIds.listItem,
+    parentId: budgetBookNodeIds.listSubDivision,
+    nodeType: "quota",
+    code: "020101001001",
+    marker: "清单",
+    name: "塔类设备整体安装",
+    projectFeature: "",
+    workContent: "1.检查验收\n2.吊装就位\n3.安装找正\n4.内件安装\n5.基础灌浆",
+    unit: "台",
+    formula: "",
+    quantity: "",
+    price: "",
+    totalPrice: "",
+    laborUnitPrice: "",
+    materialUnitPrice: "",
+    machineUnitPrice: "",
+    mainMaterialUnitPrice: "",
+    equipmentUnitPrice: "",
+    quotaInclusivePrice: "",
+    feeCategory: "",
+    feeTotal: "",
+    laborTotal: "",
+    materialTotal: "",
+    machineTotal: "",
+    mainMaterialTotal: "",
+    equipmentTotal: "",
+    managementTotal: "",
+    profitTotal: "",
+    remark: ""
+  },
+  {
+    id: budgetBookNodeIds.listQuota,
+    parentId: budgetBookNodeIds.listItem,
+    nodeType: "quota",
+    code: "1-2",
+    marker: "定额",
+    name: "单级离心泵,设备重量（t以内）0.5",
+    projectFeature: "",
+    workContent: "",
+    unit: "台",
+    formula: "",
+    quantity: "",
+    price: "691.74",
+    totalPrice: "",
+    laborUnitPrice: "",
+    materialUnitPrice: "",
+    machineUnitPrice: "",
+    mainMaterialUnitPrice: "",
+    equipmentUnitPrice: "",
+    quotaInclusivePrice: "",
+    feeCategory: "一般安装工程",
+    feeTotal: "",
+    laborTotal: "",
+    materialTotal: "",
+    machineTotal: "",
+    mainMaterialTotal: "",
+    equipmentTotal: "",
+    managementTotal: "",
+    profitTotal: "",
+    remark: ""
+  },
+  {
+    id: budgetBookNodeIds.listWorkContent,
+    parentId: budgetBookNodeIds.listItem,
+    nodeType: "leaf",
+    leafType: "formula",
+    code: "",
+    marker: "工作内容",
+    name: "子目增加费",
+    projectFeature: "",
+    workContent: "",
+    unit: "",
+    formula: "",
+    quantity: "",
+    price: "",
+    totalPrice: "",
+    laborUnitPrice: "",
+    materialUnitPrice: "",
+    machineUnitPrice: "",
+    mainMaterialUnitPrice: "",
+    equipmentUnitPrice: "",
+    quotaInclusivePrice: "",
+    feeCategory: "",
+    feeTotal: "",
+    laborTotal: "",
+    materialTotal: "",
+    machineTotal: "",
+    mainMaterialTotal: "",
+    equipmentTotal: "",
+    managementTotal: "",
+    profitTotal: "",
+    remark: ""
+  }
+];
+
+const listPricingMeasureRowsTemplate: BudgetBookPlainRow[] = [
+  {
+    id: "measure-root",
+    parentId: null,
+    code: "11",
+    marker: "工程",
+    name: "措施项目",
+    unit: "",
+    quantityBase: "",
+    base: "",
+    rate: "",
+    price: "",
+    totalPrice: "",
+    feeCategory: "",
+    measureCategory: "",
+    cbsCode: "",
+    remark: ""
+  },
+  {
+    id: "measure-list-item",
+    parentId: "measure-root",
+    code: "020101001002",
+    marker: "清单",
+    name: "塔类设备整体安装",
+    unit: "台",
+    quantityBase: "",
+    base: "",
+    rate: "",
+    price: "",
+    totalPrice: "",
+    feeCategory: "",
+    measureCategory: "",
+    cbsCode: "",
+    remark: ""
+  },
+  {
+    id: "measure-division",
+    parentId: "measure-root",
+    code: "5454454",
+    marker: "分部",
+    name: "",
+    unit: "",
+    quantityBase: "",
+    base: "",
+    rate: "",
+    price: "",
+    totalPrice: "",
+    feeCategory: "",
+    measureCategory: "",
+    cbsCode: "",
+    remark: ""
+  }
+];
+
+const listPricingOtherLeftRowsTemplate: BudgetBookPlainRow[] = [
+  { id: "other-root", parentId: null, name: "其他项目清单" },
+  { id: "other-provisional", parentId: "other-root", name: "暂列金额" },
+  { id: "other-equipment", parentId: "other-root", name: "设备、材料暂估价" },
+  { id: "other-special", parentId: "other-root", name: "专业工程暂估价" },
+  { id: "other-daywork", parentId: "other-root", name: "计日工" },
+  { id: "other-service", parentId: "other-root", name: "总承包服务费" },
+  { id: "other-claim", parentId: "other-root", name: "索赔费用" },
+  { id: "other-visa", parentId: "other-root", name: "现场签证费用" }
+];
+
+const listPricingOtherRightRowsTemplate: BudgetBookPlainRow[] = [
+  {
+    id: "other-row-root",
+    parentId: null,
+    code: "QTXM",
+    name: "其他项目清单",
+    unit: "",
+    base: "",
+    rate: "",
+    totalPrice: "0",
+    nonCompetitive: false,
+    remark: ""
+  },
+  {
+    id: "other-row-provisional",
+    parentId: "other-row-root",
+    code: "ZLJE",
+    name: "暂列金额",
+    unit: "元",
+    base: "ZLJEDH",
+    rate: "100",
+    totalPrice: "0",
+    nonCompetitive: false,
+    remark: ""
+  },
+  {
+    id: "other-row-temp",
+    parentId: "other-row-root",
+    code: "",
+    name: "暂估价",
+    unit: "",
+    base: "",
+    rate: "0",
+    totalPrice: "0",
+    nonCompetitive: false,
+    remark: ""
+  },
+  {
+    id: "other-row-equipment",
+    parentId: "other-row-temp",
+    code: "CLZGJ",
+    name: "设备、材料暂估价",
+    unit: "元",
+    base: "CLZGJDH",
+    rate: "100",
+    totalPrice: "0",
+    nonCompetitive: false,
+    remark: ""
+  },
+  {
+    id: "other-row-special",
+    parentId: "other-row-temp",
+    code: "ZGGC",
+    name: "专业工程暂估价",
+    unit: "元",
+    base: "ZGGCDH",
+    rate: "100",
+    totalPrice: "0",
+    nonCompetitive: false,
+    remark: ""
+  },
+  {
+    id: "other-row-daywork",
+    parentId: "other-row-root",
+    code: "JRG",
+    name: "计日工",
+    unit: "元",
+    base: "JRGDH",
+    rate: "100",
+    totalPrice: "0",
+    nonCompetitive: false,
+    remark: ""
+  },
+  {
+    id: "other-row-service",
+    parentId: "other-row-root",
+    code: "ZBF",
+    name: "总承包服务费",
+    unit: "元",
+    base: "ZBFDH",
+    rate: "100",
+    totalPrice: "0",
+    nonCompetitive: false,
+    remark: ""
+  },
+  {
+    id: "other-row-claim",
+    parentId: "other-row-root",
+    code: "SPFY",
+    name: "索赔费用",
+    unit: "元",
+    base: "SPFYDH",
+    rate: "100",
+    totalPrice: "0",
+    nonCompetitive: false,
+    remark: ""
+  },
+  {
+    id: "other-row-visa",
+    parentId: "other-row-root",
+    code: "XCQZFY",
+    name: "现场签证费用",
+    unit: "元",
+    base: "XCQZFYDH",
+    rate: "100",
+    totalPrice: "0",
+    nonCompetitive: false,
     remark: ""
   }
 ];
@@ -910,6 +1438,23 @@ const leafQuotaContentTemplate: BudgetBookQuotaContent = {
   heading: "当前选中主材叶子节点",
   description: "该叶子节点默认定位到主材设备标签，可查看当前主材的单条明细。"
 };
+
+const listFeatureRowsTemplate: BudgetBookFeatureRow[] = [
+  { id: "feature-1", name: "名称", value: "", output: false },
+  { id: "feature-2", name: "材质", value: "", output: false },
+  { id: "feature-3", name: "规格", value: "", output: false },
+  { id: "feature-4", name: "质量", value: "", output: false },
+  { id: "feature-5", name: "结构形式", value: "", output: false },
+  { id: "feature-6", name: "基础标高", value: "", output: false }
+];
+
+const listWorkContentRowsTemplate: BudgetBookWorkContentRow[] = [
+  { id: "work-content-1", content: "检查验收", selected: true },
+  { id: "work-content-2", content: "吊装就位", selected: true },
+  { id: "work-content-3", content: "安装找正", selected: true },
+  { id: "work-content-4", content: "内件安装", selected: true },
+  { id: "work-content-5", content: "基础灌浆", selected: true }
+];
 
 const feeMainCategoryRowsTemplate: BudgetBookFeeMainCategoryRow[] = [
   { id: "fee-main-general", name: "一般安装工程", totalAmount: "" },
@@ -1716,6 +2261,12 @@ function buildTreeRows(routeInfo: BudgetBookRoutePayload): BudgetBookTreeRow[] {
   );
 }
 
+function buildListPricingRows(
+  _routeInfo: BudgetBookRoutePayload
+): BudgetBookTreeRow[] {
+  return cloneTreeRows(listPricingRowsTemplate);
+}
+
 function createNodeDetailStateMap() {
   const parentState: BudgetBookNodeDetailState = {
     mode: "parent-only",
@@ -1776,6 +2327,83 @@ function createNodeDetailStateMap() {
   };
 }
 
+function createListPricingDetailStateMap() {
+  const projectState: BudgetBookNodeDetailState = {
+    mode: "parent-only",
+    defaultTab: "labor",
+    visibleTabs: ["labor"],
+    laborRows: cloneRows(parentLaborRowsTemplate),
+    mainMaterialRows: [],
+    formulaRows: [],
+    formulaUnit: "",
+    feeProgramRows: [],
+    feeRateRows: [],
+    extraFeeRows: [],
+    quotaContent: { heading: "", description: "" }
+  };
+
+  const listItemState: BudgetBookNodeDetailState = {
+    mode: "tabbed",
+    defaultTab: "labor",
+    visibleTabs: [
+      "labor",
+      "mainMaterial",
+      "featureContent",
+      "formula",
+      "feeProgram",
+      "listPricingRule"
+    ],
+    laborRows: cloneRows(quotaLaborRowsTemplate),
+    mainMaterialRows: [],
+    formulaRows: cloneRows(formulaRowsTemplate),
+    formulaUnit: "台",
+    feeProgramRows: cloneTreeRows(feeProgramRowsTemplate),
+    feeRateRows: cloneRows(feeRateRowsTemplate),
+    extraFeeRows: [],
+    quotaContent: { heading: "", description: "" },
+    featureRows: cloneRows(listFeatureRowsTemplate),
+    workContentRows: cloneRows(listWorkContentRowsTemplate),
+    listPricingRule: "按设计工程量计算"
+  };
+
+  const quotaState: BudgetBookNodeDetailState = {
+    mode: "tabbed",
+    defaultTab: "labor",
+    visibleTabs: [
+      "labor",
+      "mainMaterial",
+      "extraFee",
+      "formula",
+      "feeProgram",
+      "quotaDescription"
+    ],
+    laborRows: cloneRows(quotaLaborRowsTemplate),
+    mainMaterialRows: [],
+    formulaRows: cloneRows(formulaRowsTemplate),
+    formulaUnit: "台",
+    feeProgramRows: cloneTreeRows(feeProgramRowsTemplate),
+    feeRateRows: cloneRows(feeRateRowsTemplate),
+    extraFeeRows: cloneRows(extraFeeRowsTemplate),
+    quotaContent: { ...quotaContentTemplate },
+    quotaDescription:
+      "第一册 设备安装工程\\第一章 机械设备安装\\第一节 泵安装\\一、单级离心泵\n\n工作内容：施工准备、设备开箱检验、基础处理、垫铁设置、设备吊装就位、找平找正、垫铁点焊、轴系对中、应力检查、单机试车、配合检查验收。"
+  };
+
+  const workContentState: BudgetBookNodeDetailState = {
+    ...quotaState,
+    defaultTab: "extraFee"
+  };
+
+  return {
+    [budgetBookNodeIds.listProject]: projectState,
+    [budgetBookNodeIds.listDivision]: projectState,
+    [budgetBookNodeIds.listSubDivision]: projectState,
+    [budgetBookNodeIds.listItem]: listItemState,
+    [budgetBookNodeIds.listQuota]: quotaState,
+    [budgetBookNodeIds.listWorkContent]: workContentState
+  };
+}
+
 export function buildBudgetBookWorkspaceContext(
   routeInfo: BudgetBookRoutePayload
 ): BudgetBookWorkspaceContext {
@@ -1790,13 +2418,26 @@ export function buildBudgetBookWorkspaceContext(
       { key: "report", label: "报表" },
       { key: "analysis", label: "造价分析" }
     ],
+    listPricingMainTabs: [
+      { key: "base", label: "基本信息" },
+      { key: "listDivision", label: "分部分项" },
+      { key: "listMeasures", label: "措施项目" },
+      { key: "listOther", label: "其他项目" },
+      { key: "summary", label: "工料机汇总" },
+      { key: "fee", label: "取费程序" },
+      { key: "priceAdjust", label: "调价" },
+      { key: "report", label: "报表" }
+    ],
     detailTabs: [
       { key: "labor", label: "人材机" },
       { key: "mainMaterial", label: "主材设备" },
+      { key: "featureContent", label: "特征及内容" },
       { key: "formula", label: "工程量计算式" },
       { key: "feeProgram", label: "取费程序" },
       { key: "extraFee", label: "子目增加费" },
-      { key: "quotaContent", label: "定额子目内容" }
+      { key: "quotaContent", label: "定额子目内容" },
+      { key: "listPricingRule", label: "清单计价规则" },
+      { key: "quotaDescription", label: "定额说明" }
     ],
     toolbarGroups: [
       [
@@ -1843,12 +2484,20 @@ export function buildBudgetBookWorkspaceContext(
     shortcutBadges: ["定", "Z", "S"],
     shortcutLinks: ["主材设备选择", "定额计价"],
     mainColumns,
+    listPricingMainColumns,
+    listPricingMeasureColumns,
+    listPricingMeasureRows: cloneTreeRows(listPricingMeasureRowsTemplate),
+    listPricingOtherLeftRows: cloneTreeRows(listPricingOtherLeftRowsTemplate),
+    listPricingOtherRightColumns,
+    listPricingOtherRightRows: cloneTreeRows(listPricingOtherRightRowsTemplate),
     laborColumns,
     mainMaterialColumns,
     formulaColumns,
     extraFeeColumns,
     rows: buildTreeRows(routeInfo),
+    listPricingRows: buildListPricingRows(routeInfo),
     detailStateMap: createNodeDetailStateMap(),
+    listPricingDetailStateMap: createListPricingDetailStateMap(),
     feeMainWorkspace: {
       defaultCategoryId: "fee-main-general",
       defaultTemplate: "石油安装工程取费模板2022",

@@ -3,14 +3,18 @@ import type { BudgetBookRoutePayload } from "./workspaceState";
 
 export type BudgetBookNodeType = "project" | "quota" | "leaf";
 export type BudgetBookLeafType = "mainMaterial" | "equipment" | "formula";
+export type BudgetBookPricingMode = "quota" | "list";
 
 export type BudgetBookDetailTabKey =
   | "labor"
   | "mainMaterial"
+  | "featureContent"
   | "formula"
   | "feeProgram"
   | "extraFee"
-  | "quotaContent";
+  | "quotaContent"
+  | "listPricingRule"
+  | "quotaDescription";
 
 export interface BudgetBookTabOption {
   key: BudgetBookDetailTabKey;
@@ -20,6 +24,12 @@ export interface BudgetBookTabOption {
 export interface BudgetBookMainTabOption {
   key: string;
   label: string;
+}
+
+export interface BudgetBookPlainRow {
+  id: string;
+  parentId: string | null;
+  [key: string]: string | boolean | null | undefined;
 }
 
 export interface BudgetBookToolbarAction {
@@ -79,6 +89,11 @@ export interface BudgetBookTreeRow {
   mainMaterialTotal: string;
   equipmentTotal: string;
   remark: string;
+  projectFeature?: string;
+  workContent?: string;
+  totalPrice?: string;
+  managementTotal?: string;
+  profitTotal?: string;
 }
 
 export interface BudgetBookLaborRow {
@@ -168,6 +183,19 @@ export interface BudgetBookQuotaContent {
   description: string;
 }
 
+export interface BudgetBookFeatureRow {
+  id: string;
+  name: string;
+  value: string;
+  output: boolean;
+}
+
+export interface BudgetBookWorkContentRow {
+  id: string;
+  content: string;
+  selected: boolean;
+}
+
 export interface BudgetBookNodeDetailState {
   mode: "parent-only" | "tabbed";
   defaultTab: BudgetBookDetailTabKey;
@@ -180,23 +208,37 @@ export interface BudgetBookNodeDetailState {
   feeRateRows: BudgetBookFeeRateRow[];
   extraFeeRows: BudgetBookExtraFeeRow[];
   quotaContent: BudgetBookQuotaContent;
+  featureRows?: BudgetBookFeatureRow[];
+  workContentRows?: BudgetBookWorkContentRow[];
+  listPricingRule?: string;
+  quotaDescription?: string;
 }
 
 export interface BudgetBookWorkspaceContext {
   routeInfo: BudgetBookRoutePayload;
   defaultNodeId: string;
   mainTabs: BudgetBookMainTabOption[];
+  listPricingMainTabs: BudgetBookMainTabOption[];
   detailTabs: BudgetBookTabOption[];
   toolbarGroups: BudgetBookToolbarAction[][];
   feeToolbarGroups: BudgetBookToolbarAction[][];
   shortcutBadges: string[];
   shortcutLinks: string[];
   mainColumns: WorkbenchColumn[];
+  listPricingMainColumns: WorkbenchColumn[];
+  listPricingMeasureColumns: WorkbenchColumn[];
+  listPricingMeasureRows: BudgetBookPlainRow[];
+  listPricingMeasureDetailStateMap: Record<string, BudgetBookNodeDetailState>;
+  listPricingOtherLeftRows: BudgetBookPlainRow[];
+  listPricingOtherRightColumns: WorkbenchColumn[];
+  listPricingOtherRightRows: BudgetBookPlainRow[];
   laborColumns: WorkbenchColumn[];
   mainMaterialColumns: WorkbenchColumn[];
   formulaColumns: WorkbenchColumn[];
   extraFeeColumns: WorkbenchColumn[];
   rows: BudgetBookTreeRow[];
+  listPricingRows: BudgetBookTreeRow[];
   detailStateMap: Record<string, BudgetBookNodeDetailState>;
+  listPricingDetailStateMap: Record<string, BudgetBookNodeDetailState>;
   feeMainWorkspace: BudgetBookFeeMainWorkspaceContext;
 }

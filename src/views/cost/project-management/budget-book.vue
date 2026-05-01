@@ -19,10 +19,14 @@ import type {
   BudgetBookFeeMainSettingRow,
   BudgetBookFeeProgramRow,
   BudgetBookFeeRateRow,
+  BudgetBookFeatureRow,
   BudgetBookFormulaRow,
   BudgetBookLaborRow,
   BudgetBookMainMaterialRow,
+  BudgetBookPlainRow,
+  BudgetBookPricingMode,
   BudgetBookTreeRow,
+  BudgetBookWorkContentRow,
   BudgetBookWorkspaceContext
 } from "./budgetBookTypes";
 import { type BudgetBookRoutePayload } from "./workspaceState";
@@ -379,7 +383,11 @@ const budgetContextMenuRef = ref<HTMLElement | null>(null);
 let pageResizeObserver: ResizeObserver | undefined;
 let pageHeightFrame = 0;
 const activeMainTab = ref("budget");
+const pricingMode = ref<BudgetBookPricingMode>("quota");
 const selectedNodeId = ref("");
+const selectedMeasureRowId = ref("");
+const selectedOtherLeftRowId = ref("");
+const selectedOtherRightRowId = ref("");
 const activeDetailTab = ref<BudgetBookDetailTabKey>("labor");
 const showFeeRate = ref(false);
 const selectedFeeMainCategoryId = ref("");
@@ -617,7 +625,43 @@ const activeToolbarGroups = computed(() => {
     ? workspaceContext.value.feeToolbarGroups
     : workspaceContext.value.toolbarGroups;
 });
+const pricingModeToggleLabel = computed(() =>
+  pricingMode.value === "quota" ? "切换清单计价" : "切换定额计价"
+);
+const visibleMainTabs = computed(() =>
+  pricingMode.value === "list"
+    ? workspaceContext.value.listPricingMainTabs
+    : workspaceContext.value.mainTabs
+);
+const currentMainRows = computed(() =>
+  pricingMode.value === "list"
+    ? workspaceContext.value.listPricingRows
+    : workspaceContext.value.rows
+);
+const currentMainColumns = computed(() =>
+  pricingMode.value === "list"
+    ? workspaceContext.value.listPricingMainColumns
+    : workspaceContext.value.mainColumns
+);
 const showBudgetShortcuts = computed(() => activeMainTab.value === "budget");
+const showListDivisionShortcuts = computed(
+  () => pricingMode.value === "list" && activeMainTab.value === "listDivision"
+);
+const showPricingShortcuts = computed(
+  () => showBudgetShortcuts.value || showListDivisionShortcuts.value
+);
+const isBudgetMainWorkspace = computed(() => {
+  if (pricingMode.value === "list")
+    return activeMainTab.value === "listDivision";
+
+  return activeMainTab.value === "budget";
+});
+const isMeasureWorkspace = computed(
+  () => pricingMode.value === "list" && activeMainTab.value === "listMeasures"
+);
+const isOtherWorkspace = computed(
+  () => pricingMode.value === "list" && activeMainTab.value === "listOther"
+);
 const currentPricingTreeNodes = computed(() => {
   if (activePricingLibraryTab.value === "resource") return resourceTreeNodes;
   if (activePricingLibraryTab.value === "indicator") return indicatorTreeNodes;
@@ -657,18 +701,25 @@ const feeMainLeftStyle = computed(() => {
 
 const selectedNode = computed<BudgetBookTreeRow | null>(() => {
   return (
-    workspaceContext.value.rows.find(
-      item => item.id === selectedNodeId.value
-    ) ??
-    workspaceContext.value.rows[0] ??
+    currentMainRows.value.find(item => item.id === selectedNodeId.value) ??
+    currentMainRows.value[0] ??
     null
   );
 });
 const currentDetailState = computed(() => {
-  const defaultNodeId = workspaceContext.value.defaultNodeId;
+  const defaultNodeId =
+    pricingMode.value === "list"
+      ? workspaceContext.value.listPricingRows[0]?.id
+      : workspaceContext.value.defaultNodeId;
+  const stateMap =
+    pricingMode.value === "list"
+      ? workspaceContext.value.listPricingDetailStateMap
+      : workspaceContext.value.detailStateMap;
+
   return (
-    workspaceContext.value.detailStateMap[selectedNode.value?.id ?? ""] ??
-    workspaceContext.value.detailStateMap[defaultNodeId]
+    stateMap[selectedNode.value?.id ?? ""] ??
+    stateMap[defaultNodeId ?? ""] ??
+    workspaceContext.value.detailStateMap[workspaceContext.value.defaultNodeId]
   );
 });
 const isParentOnlyMode = computed(
@@ -713,6 +764,18 @@ const currentQuotaContent = computed(
   () =>
     currentDetailState.value?.quotaContent ?? { heading: "", description: "" }
 );
+const currentFeatureRows = computed(
+  () => currentDetailState.value?.featureRows ?? []
+);
+const currentWorkContentRows = computed(
+  () => currentDetailState.value?.workContentRows ?? []
+);
+const currentListPricingRule = computed(
+  () => currentDetailState.value?.listPricingRule ?? ""
+);
+const currentQuotaDescription = computed(
+  () => currentDetailState.value?.quotaDescription ?? ""
+);
 const currentFormulaUnit = computed(
   () => currentDetailState.value?.formulaUnit || selectedNode.value?.unit || ""
 );
@@ -749,7 +812,14 @@ watch(
     workspaceContext.value = buildBudgetBookWorkspaceContext(
       readBudgetBookRoutePayload(route.query)
     );
+    pricingMode.value = "quota";
     selectedNodeId.value = workspaceContext.value.defaultNodeId;
+    selectedMeasureRowId.value =
+      workspaceContext.value.listPricingMeasureRows[0]?.id ?? "";
+    selectedOtherLeftRowId.value =
+      workspaceContext.value.listPricingOtherLeftRows[0]?.id ?? "";
+    selectedOtherRightRowId.value =
+      workspaceContext.value.listPricingOtherRightRows[0]?.id ?? "";
     activeDetailTab.value =
       workspaceContext.value.detailStateMap[selectedNodeId.value]?.defaultTab ??
       "labor";
@@ -824,6 +894,10 @@ function syncDetailSelectionRows() {
   selectedDetailRowIds.extraFee = currentExtraFeeRows.value[0]?.id ?? "";
 }
 
+function getToolbarActionLabel(action: { key: string; label: string }) {
+  return action.key === "summary" ? pricingModeToggleLabel.value : action.label;
+}
+
 function syncFeeMainSelectionRows() {
   selectedFeeMainProgramRowId.value =
     currentFeeMainProgramRows.value[0]?.id ?? "";
@@ -854,7 +928,30 @@ function schedulePageViewportHeightUpdate() {
   });
 }
 
-function handleToolbarAction(label: string) {
+function handleToolbarAction(label: string, key = "") {
+  if (key === "summary") {
+    pricingMode.value = pricingMode.value === "quota" ? "list" : "quota";
+    activeMainTab.value =
+      pricingMode.value === "list" ? "listDivision" : "budget";
+    selectedNodeId.value =
+      pricingMode.value === "list"
+        ? (workspaceContext.value.listPricingRows[0]?.id ?? "")
+        : workspaceContext.value.defaultNodeId;
+    selectedMeasureRowId.value =
+      workspaceContext.value.listPricingMeasureRows[0]?.id ?? "";
+    selectedOtherLeftRowId.value =
+      workspaceContext.value.listPricingOtherLeftRows[0]?.id ?? "";
+    selectedOtherRightRowId.value =
+      workspaceContext.value.listPricingOtherRightRows[0]?.id ?? "";
+    activeDetailTab.value =
+      currentDetailState.value?.defaultTab ??
+      visibleDetailTabs.value[0]?.key ??
+      "labor";
+    showFeeRate.value = false;
+    syncDetailSelectionRows();
+    return;
+  }
+
   if (label === "保存") {
     message("预算书已保存，当前为原型数据写回", { type: "success" });
     return;
@@ -874,6 +971,35 @@ function handlePricingTabClick(key: PricingLibraryTabKey) {
 }
 
 function handleMainTabClick(key: string) {
+  if (pricingMode.value === "list") {
+    if (
+      key === "listDivision" ||
+      key === "listMeasures" ||
+      key === "listOther" ||
+      key === "fee"
+    ) {
+      activeMainTab.value = key;
+      showFeeRate.value = false;
+
+      if (key === "listDivision") {
+        selectedNodeId.value =
+          workspaceContext.value.listPricingRows[0]?.id ?? "";
+        activeDetailTab.value =
+          currentDetailState.value?.defaultTab ??
+          visibleDetailTabs.value[0]?.key ??
+          "labor";
+        syncDetailSelectionRows();
+      }
+
+      return;
+    }
+
+    message("当前阶段先实现清单计价的分部分项、措施项目和其他项目", {
+      type: "info"
+    });
+    return;
+  }
+
   if (key === "budget" || key === "fee") {
     activeMainTab.value = key;
     return;
@@ -886,6 +1012,18 @@ function handleMainTabClick(key: string) {
 
 function handleMainRowSelect({ row }: { row: BudgetBookTreeRow }) {
   selectedNodeId.value = row.id;
+}
+
+function handleMeasureRowSelect({ row }: { row: BudgetBookPlainRow }) {
+  selectedMeasureRowId.value = row.id;
+}
+
+function handleOtherLeftRowSelect({ row }: { row: BudgetBookPlainRow }) {
+  selectedOtherLeftRowId.value = row.id;
+}
+
+function handleOtherRightRowSelect({ row }: { row: BudgetBookPlainRow }) {
+  selectedOtherRightRowId.value = row.id;
 }
 
 function handleDetailTabClick(tab: BudgetBookDetailTabKey) {
@@ -925,6 +1063,8 @@ function handleDetailRowSelect(
     | BudgetBookFormulaRow
     | BudgetBookFeeProgramRow
     | BudgetBookFeeRateRow
+    | BudgetBookFeatureRow
+    | BudgetBookWorkContentRow
     | { id: string }
 ) {
   selectedDetailRowIds[bucket] = row.id;
@@ -1023,6 +1163,18 @@ function handleFeeMainHorizontalDividerMouseDown(event: MouseEvent) {
 
 function mainRowClassName({ row }: { row: { id: string } }) {
   return row.id === selectedNodeId.value ? "is-selected-row" : "";
+}
+
+function measureRowClassName({ row }: { row: { id: string } }) {
+  return row.id === selectedMeasureRowId.value ? "is-selected-row" : "";
+}
+
+function otherLeftRowClassName({ row }: { row: { id: string } }) {
+  return row.id === selectedOtherLeftRowId.value ? "is-selected-row" : "";
+}
+
+function otherRightRowClassName({ row }: { row: { id: string } }) {
+  return row.id === selectedOtherRightRowId.value ? "is-selected-row" : "";
 }
 
 function laborRowClassName({ row }: { row: { id: string } }) {
@@ -1128,12 +1280,14 @@ onBeforeUnmount(() => {
             :key="action.key"
             class="budget-toolbar-action"
             type="button"
-            @click="handleToolbarAction(action.label)"
+            @click="
+              handleToolbarAction(getToolbarActionLabel(action), action.key)
+            "
           >
             <span class="budget-toolbar-icon">
               <IconifyIconOnline :icon="action.icon" />
             </span>
-            <span>{{ action.label }}</span>
+            <span>{{ getToolbarActionLabel(action) }}</span>
           </button>
         </div>
       </div>
@@ -1143,7 +1297,7 @@ onBeforeUnmount(() => {
       <div class="budget-main-tabs">
         <div class="budget-main-tab-list">
           <button
-            v-for="tab in workspaceContext.mainTabs"
+            v-for="tab in visibleMainTabs"
             :key="tab.key"
             class="budget-main-tab"
             :class="{ 'is-active': tab.key === activeMainTab }"
@@ -1154,7 +1308,7 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <div v-if="showBudgetShortcuts" class="budget-shortcuts">
+        <div v-if="showPricingShortcuts" class="budget-shortcuts">
           <span
             v-for="badge in workspaceContext.shortcutBadges"
             :key="badge"
@@ -1366,7 +1520,181 @@ onBeforeUnmount(() => {
       </div>
 
       <div
-        v-else
+        v-else-if="isMeasureWorkspace"
+        ref="contentSplitRef"
+        class="budget-content-grid"
+        :style="detailPanelStyle"
+      >
+        <div class="budget-main-table-shell">
+          <vxe-table
+            border
+            round
+            size="small"
+            stripe
+            height="100%"
+            show-header-overflow="title"
+            :data="workspaceContext.listPricingMeasureRows"
+            :column-config="{ resizable: true }"
+            :tree-config="{
+              transform: true,
+              rowField: 'id',
+              parentField: 'parentId',
+              expandAll: true
+            }"
+            :row-config="{
+              isHover: true,
+              keyField: 'id'
+            }"
+            :row-class-name="measureRowClassName"
+            @cell-click="handleMeasureRowSelect"
+          >
+            <WorkbenchColumnNode
+              v-for="column in workspaceContext.listPricingMeasureColumns"
+              :key="column.id"
+              :column="column"
+            />
+          </vxe-table>
+        </div>
+
+        <div
+          class="budget-main-divider"
+          @mousedown.prevent="handleMainDividerMouseDown"
+        >
+          <span />
+        </div>
+
+        <div class="budget-detail-panel">
+          <div class="budget-detail-tabs">
+            <button class="budget-detail-tab is-active" type="button">
+              人材机
+            </button>
+
+            <div class="budget-detail-ops">
+              <template>
+                <button type="button" @click="handleToolbarAction('增加')">
+                  增
+                </button>
+                <button type="button" @click="handleToolbarAction('刷新')">
+                  R
+                </button>
+                <button type="button" @click="handleToolbarAction('校核')">
+                  C
+                </button>
+                <button type="button" @click="handleToolbarAction('联查')">
+                  J
+                </button>
+                <button
+                  type="button"
+                  @click="handleToolbarAction('选择工料机')"
+                >
+                  选择工料机
+                </button>
+              </template>
+
+              <button
+                class="budget-detail-collapse"
+                type="button"
+                title="收起区域"
+                @click="handleToolbarAction('收起区域')"
+              >
+                <IconifyIconOnline icon="ep:arrow-down" />
+              </button>
+            </div>
+          </div>
+
+          <div class="budget-detail-body">
+            <div class="detail-table-shell">
+              <vxe-table
+                border
+                round
+                size="small"
+                stripe
+                height="100%"
+                show-overflow="title"
+                :data="[]"
+                :row-config="{
+                  isHover: true,
+                  keyField: 'id'
+                }"
+              >
+                <WorkbenchColumnNode
+                  v-for="column in workspaceContext.laborColumns"
+                  :key="column.id"
+                  :column="column"
+                />
+              </vxe-table>
+            </div>
+          </div>
+
+          <div class="budget-detail-status">
+            项目编码：　合价：0　单价：0　人工费：0　材料费：0　机械费：0　管理费：0　利润：0
+          </div>
+        </div>
+      </div>
+
+      <div v-else-if="isOtherWorkspace" class="other-project-workspace">
+        <div class="other-project-tree">
+          <vxe-table
+            border
+            round
+            size="small"
+            stripe
+            height="100%"
+            show-overflow="title"
+            :data="workspaceContext.listPricingOtherLeftRows"
+            :tree-config="{
+              transform: true,
+              rowField: 'id',
+              parentField: 'parentId',
+              expandAll: true
+            }"
+            :row-config="{
+              isHover: true,
+              keyField: 'id'
+            }"
+            :row-class-name="otherLeftRowClassName"
+            @cell-click="handleOtherLeftRowSelect"
+          >
+            <vxe-column field="name" title="" min-width="220" tree-node />
+          </vxe-table>
+        </div>
+
+        <div class="other-project-divider" />
+
+        <div class="other-project-table">
+          <vxe-table
+            border
+            round
+            size="small"
+            stripe
+            height="100%"
+            show-header-overflow="title"
+            :data="workspaceContext.listPricingOtherRightRows"
+            :column-config="{ resizable: true }"
+            :tree-config="{
+              transform: true,
+              rowField: 'id',
+              parentField: 'parentId',
+              expandAll: true
+            }"
+            :row-config="{
+              isHover: true,
+              keyField: 'id'
+            }"
+            :row-class-name="otherRightRowClassName"
+            @cell-click="handleOtherRightRowSelect"
+          >
+            <WorkbenchColumnNode
+              v-for="column in workspaceContext.listPricingOtherRightColumns"
+              :key="column.id"
+              :column="column"
+            />
+          </vxe-table>
+        </div>
+      </div>
+
+      <div
+        v-else-if="isBudgetMainWorkspace"
         ref="contentSplitRef"
         class="budget-content-grid"
         :style="detailPanelStyle"
@@ -1380,7 +1708,7 @@ onBeforeUnmount(() => {
             stripe
             height="100%"
             show-header-overflow="title"
-            :data="workspaceContext.rows"
+            :data="currentMainRows"
             :column-config="{ resizable: true }"
             :tree-config="{
               transform: true,
@@ -1396,7 +1724,7 @@ onBeforeUnmount(() => {
             @cell-click="handleMainRowSelect"
           >
             <WorkbenchColumnNode
-              v-for="column in workspaceContext.mainColumns"
+              v-for="column in currentMainColumns"
               :key="column.id"
               :column="column"
             />
@@ -1516,6 +1844,62 @@ onBeforeUnmount(() => {
                   :column="column"
                 />
               </vxe-table>
+            </div>
+
+            <div
+              v-else-if="currentDetailTab === 'featureContent'"
+              class="feature-content-shell"
+            >
+              <div class="detail-table-shell">
+                <vxe-table
+                  border
+                  round
+                  size="small"
+                  stripe
+                  height="100%"
+                  show-overflow="title"
+                  :data="currentFeatureRows"
+                  :row-config="{
+                    isHover: true,
+                    keyField: 'id'
+                  }"
+                >
+                  <vxe-column field="name" title="名称" min-width="120" />
+                  <vxe-column field="value" title="特征值" min-width="180" />
+                  <vxe-column title="输出" width="72" align="center">
+                    <template #default="{ row }">
+                      <el-checkbox v-model="row.output" />
+                    </template>
+                  </vxe-column>
+                </vxe-table>
+              </div>
+
+              <div class="detail-table-shell">
+                <vxe-table
+                  border
+                  round
+                  size="small"
+                  stripe
+                  height="100%"
+                  show-overflow="title"
+                  :data="currentWorkContentRows"
+                  :row-config="{
+                    isHover: true,
+                    keyField: 'id'
+                  }"
+                >
+                  <vxe-column
+                    field="content"
+                    title="工作内容"
+                    min-width="220"
+                  />
+                  <vxe-column title="选择" width="106" align="center">
+                    <template #default="{ row }">
+                      <el-checkbox v-model="row.selected" />
+                    </template>
+                  </vxe-column>
+                </vxe-table>
+              </div>
             </div>
 
             <div
@@ -1720,6 +2104,24 @@ onBeforeUnmount(() => {
               <article class="quota-content-card">
                 <h3>{{ currentQuotaContent.heading }}</h3>
                 <p>{{ currentQuotaContent.description }}</p>
+              </article>
+            </div>
+
+            <div
+              v-else-if="currentDetailTab === 'listPricingRule'"
+              class="quota-content-shell"
+            >
+              <article class="quota-content-card quota-content-card--plain">
+                <p>{{ currentListPricingRule }}</p>
+              </article>
+            </div>
+
+            <div
+              v-else-if="currentDetailTab === 'quotaDescription'"
+              class="quota-content-shell"
+            >
+              <article class="quota-content-card quota-content-card--plain">
+                <p>{{ currentQuotaDescription }}</p>
               </article>
             </div>
           </div>
@@ -2416,6 +2818,26 @@ onBeforeUnmount(() => {
   padding: 0 14px;
 }
 
+.other-project-workspace {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 288px 8px minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.other-project-tree,
+.other-project-table {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.other-project-divider {
+  background: linear-gradient(90deg, #d8dee8 0%, #ccd4df 100%);
+}
+
 .budget-main-divider,
 .fee-program-divider,
 .fee-main-horizontal-divider {
@@ -2527,6 +2949,16 @@ onBeforeUnmount(() => {
   padding: 0 14px 14px;
 }
 
+.budget-detail-status {
+  flex: 0 0 auto;
+  min-height: 24px;
+  padding: 4px 10px;
+  font-size: 13px;
+  color: #1f4f78;
+  background: #e9f3fb;
+  border-top: 1px solid #d4e3f0;
+}
+
 .budget-context-menu {
   position: fixed;
   z-index: 50;
@@ -2628,14 +3060,22 @@ onBeforeUnmount(() => {
 
 .detail-table-shell,
 .fee-program-shell,
+.feature-content-shell,
 .quota-content-shell {
   height: 100%;
   min-height: 0;
 }
 
 .detail-table-shell,
-.fee-program-shell {
+.fee-program-shell,
+.feature-content-shell {
   overflow: hidden;
+}
+
+.feature-content-shell {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.56fr) minmax(360px, 0.44fr);
+  gap: 12px;
 }
 
 .detail-table-shell--formula {
@@ -2695,6 +3135,10 @@ onBeforeUnmount(() => {
     color: #385776;
     white-space: pre-line;
   }
+}
+
+.quota-content-card--plain {
+  padding-top: 8px;
 }
 
 :deep(.budget-main-table-shell .vxe-table--render-default),
