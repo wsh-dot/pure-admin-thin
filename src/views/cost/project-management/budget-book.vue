@@ -2927,13 +2927,16 @@ onBeforeUnmount(() => {
 
 .budget-toolbar-groups {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 12px;
   justify-content: flex-end;
+  max-width: 100%;
+  overflow: auto hidden;
 }
 
 .budget-toolbar-group {
   display: flex;
+  flex: 0 0 auto;
   gap: 8px;
   padding-right: 12px;
   border-right: 1px solid #d8e5f3;
@@ -2946,6 +2949,7 @@ onBeforeUnmount(() => {
 
 .budget-toolbar-action {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: 6px;
   align-items: center;
