@@ -1209,6 +1209,168 @@ const mainMaterialRowsTemplate: BudgetBookMainMaterialRow[] = [
   }
 ];
 
+const listPricingMainMaterialRowsTemplate: BudgetBookMainMaterialRow[] = [
+  {
+    id: "list-main-material-1",
+    code: "SB-001",
+    name: "塔内件成套设备",
+    type: "设备",
+    spec: "DN2200",
+    unit: "套",
+    amountQty: "1",
+    taxIncludedPrice: "58600.00",
+    taxExcludedPrice: "51858.41",
+    actualContent: "1",
+    actualUsage: "1",
+    importedEquipment: "否",
+    exchangeRate: "",
+    amount: "51858.41",
+    quotaContent: "1",
+    remark: ""
+  },
+  {
+    id: "list-main-material-2",
+    code: "ZC-014",
+    name: "碳钢平台扶梯",
+    type: "主材",
+    spec: "Q235B",
+    unit: "t",
+    amountQty: "2.4",
+    taxIncludedPrice: "6850.00",
+    taxExcludedPrice: "6061.95",
+    actualContent: "2.4",
+    actualUsage: "2.4",
+    importedEquipment: "否",
+    exchangeRate: "",
+    amount: "14548.68",
+    quotaContent: "2.4",
+    remark: ""
+  },
+  {
+    id: "list-main-material-3",
+    code: "ZC-021",
+    name: "地脚螺栓",
+    type: "主材",
+    spec: "M36×1200",
+    unit: "套",
+    amountQty: "32",
+    taxIncludedPrice: "126.00",
+    taxExcludedPrice: "111.50",
+    actualContent: "32",
+    actualUsage: "32",
+    importedEquipment: "否",
+    exchangeRate: "",
+    amount: "3568.00",
+    quotaContent: "32",
+    remark: ""
+  }
+];
+
+const measureLaborRowsTemplate: BudgetBookLaborRow[] = [
+  {
+    id: "measure-labor-1",
+    code: "1",
+    name: "综合工日",
+    type: "人工",
+    spec: "",
+    unit: "工日",
+    quotaPrice: "169.60",
+    marketPrice: "169.60",
+    quotaConsumption: "2.450",
+    actualConsumption: "2.450",
+    quantity: "2.45",
+    amount: "415.52",
+    remark: ""
+  },
+  {
+    id: "measure-labor-2",
+    code: "4474",
+    name: "电动套丝机",
+    type: "机械",
+    spec: "TQ3A",
+    unit: "台班",
+    quotaPrice: "23.89",
+    marketPrice: "23.89",
+    quotaConsumption: "0.180",
+    actualConsumption: "0.180",
+    quantity: "0.18",
+    amount: "4.30",
+    remark: ""
+  },
+  {
+    id: "measure-labor-3",
+    code: "4501",
+    name: "砂轮切割机",
+    type: "机械",
+    spec: "Φ500",
+    unit: "台班",
+    quotaPrice: "14.10",
+    marketPrice: "14.10",
+    quotaConsumption: "0.120",
+    actualConsumption: "0.120",
+    quantity: "0.12",
+    amount: "1.69",
+    remark: ""
+  }
+];
+
+const measureMainMaterialRowsTemplate: BudgetBookMainMaterialRow[] = [
+  {
+    id: "measure-main-material-1",
+    code: "CS-001",
+    name: "脚手架钢管",
+    type: "主材",
+    spec: "Φ48×3.5",
+    unit: "t",
+    amountQty: "1.2",
+    taxIncludedPrice: "4300.00",
+    taxExcludedPrice: "3805.31",
+    actualContent: "1.2",
+    actualUsage: "1.2",
+    importedEquipment: "否",
+    exchangeRate: "",
+    amount: "4566.37",
+    quotaContent: "1.2",
+    remark: ""
+  },
+  {
+    id: "measure-main-material-2",
+    code: "CS-002",
+    name: "扣件",
+    type: "主材",
+    spec: "十字扣",
+    unit: "个",
+    amountQty: "180",
+    taxIncludedPrice: "6.50",
+    taxExcludedPrice: "5.75",
+    actualContent: "180",
+    actualUsage: "180",
+    importedEquipment: "否",
+    exchangeRate: "",
+    amount: "1035.00",
+    quotaContent: "180",
+    remark: ""
+  },
+  {
+    id: "measure-main-material-3",
+    code: "CS-003",
+    name: "安全网",
+    type: "主材",
+    spec: "密目式",
+    unit: "㎡",
+    amountQty: "260",
+    taxIncludedPrice: "8.20",
+    taxExcludedPrice: "7.26",
+    actualContent: "260",
+    actualUsage: "260",
+    importedEquipment: "否",
+    exchangeRate: "",
+    amount: "1887.60",
+    quotaContent: "260",
+    remark: ""
+  }
+];
+
 const formulaRowsTemplate: BudgetBookFormulaRow[] = [
   {
     id: "formula-1",
@@ -2354,7 +2516,7 @@ function createListPricingDetailStateMap() {
       "listPricingRule"
     ],
     laborRows: cloneRows(quotaLaborRowsTemplate),
-    mainMaterialRows: [],
+    mainMaterialRows: cloneRows(listPricingMainMaterialRowsTemplate),
     formulaRows: cloneRows(formulaRowsTemplate),
     formulaUnit: "台",
     feeProgramRows: cloneTreeRows(feeProgramRowsTemplate),
@@ -2430,8 +2592,8 @@ function createListPricingMeasureDetailStateMap() {
       "feeProgram",
       "listPricingRule"
     ],
-    laborRows: [],
-    mainMaterialRows: [],
+    laborRows: cloneRows(measureLaborRowsTemplate),
+    mainMaterialRows: cloneRows(measureMainMaterialRowsTemplate),
     formulaRows: cloneRows(formulaRowsTemplate),
     formulaUnit: "台",
     feeProgramRows: cloneTreeRows(feeProgramRowsTemplate),
@@ -2447,8 +2609,8 @@ function createListPricingMeasureDetailStateMap() {
     mode: "tabbed",
     defaultTab: "labor",
     visibleTabs: ["labor", "mainMaterial"],
-    laborRows: [],
-    mainMaterialRows: [],
+    laborRows: cloneRows(measureLaborRowsTemplate),
+    mainMaterialRows: cloneRows(measureMainMaterialRowsTemplate),
     formulaRows: [],
     formulaUnit: "",
     feeProgramRows: [],
