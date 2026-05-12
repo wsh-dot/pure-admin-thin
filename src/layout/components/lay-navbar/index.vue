@@ -1,135 +1,90 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { useNav } from "@/layout/hooks/useNav";
-import LaySearch from "../lay-search/index.vue";
-import LayNotice from "../lay-notice/index.vue";
-import LayNavMix from "../lay-sidebar/NavMix.vue";
-import LaySidebarFullScreen from "../lay-sidebar/components/SidebarFullScreen.vue";
-import LaySidebarBreadCrumb from "../lay-sidebar/components/SidebarBreadCrumb.vue";
-import LaySidebarTopCollapse from "../lay-sidebar/components/SidebarTopCollapse.vue";
+import changqingLogo from "@/assets/cost/changqing-logo.png";
+import UserLine from "~icons/ri/user-3-line";
+import BuildingLine from "~icons/ri/building-2-line";
+import SwapLine from "~icons/ri/swap-box-line";
+import HomeLine from "~icons/ri/home-4-line";
+import ProfileLine from "~icons/ri/profile-line";
+import LogoutLine from "~icons/ri/logout-circle-r-line";
 
-import LogoutCircleRLine from "~icons/ri/logout-circle-r-line";
-import Setting from "~icons/ri/settings-3-line";
-
-const {
-  layout,
-  device,
-  logout,
-  onPanel,
-  pureApp,
-  username,
-  userAvatar,
-  avatarsStyle,
-  toggleSideBar
-} = useNav();
+const { logout } = useNav();
+const profileVisible = ref(false);
+const orgVisible = ref(false);
+const displayUsername = "系统管理员";
+const displayOrg = "长庆油田分公司";
 </script>
 
 <template>
-  <div class="navbar bg-[#fff] shadow-xs shadow-[rgba(0,21,41,0.08)]">
-    <LaySidebarTopCollapse
-      v-if="device === 'mobile'"
-      class="hamburger-container"
-      :is-active="pureApp.sidebar.opened"
-      @toggleClick="toggleSideBar"
-    />
-
-    <LaySidebarBreadCrumb
-      v-if="layout !== 'mix' && device !== 'mobile'"
-      class="breadcrumb-container"
-    />
-
-    <LayNavMix v-if="layout === 'mix'" />
-
-    <div v-if="layout === 'vertical'" class="vertical-header-right">
-      <!-- 菜单搜索 -->
-      <LaySearch id="header-search" />
-      <!-- 全屏 -->
-      <LaySidebarFullScreen id="full-screen" />
-      <!-- 消息通知 -->
-      <LayNotice id="header-notice" />
-      <!-- 退出登录 -->
-      <el-dropdown trigger="click">
-        <span class="el-dropdown-link navbar-bg-hover select-none">
-          <img :src="userAvatar" :style="avatarsStyle" />
-          <p v-if="username" class="dark:text-white">{{ username }}</p>
-        </span>
-        <template #dropdown>
-          <el-dropdown-menu class="logout">
-            <el-dropdown-item @click="logout">
-              <IconifyIconOffline
-                :icon="LogoutCircleRLine"
-                style="margin: 5px"
-              />
-              退出系统
-            </el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
-      <span
-        class="set-icon navbar-bg-hover"
-        title="打开系统配置"
-        @click="onPanel"
-      >
-        <IconifyIconOffline :icon="Setting" />
-      </span>
+  <div class="cq-navbar">
+    <div class="cq-brand">
+      <img
+        class="cq-brand-logo"
+        :src="changqingLogo"
+        alt="长庆油田公司工程造价管理信息系统"
+      />
+      <div class="cq-brand-title">
+        <h1>长庆油田公司工程造价管理信息系统</h1>
+      </div>
     </div>
+
+    <nav class="cq-user-links" aria-label="用户入口">
+      <span class="cq-user">
+        <IconifyIconOffline :icon="UserLine" />
+        <b>{{ displayUsername }}</b>
+        <em>，欢迎您！</em>
+      </span>
+      <span class="cq-org">
+        <IconifyIconOffline :icon="BuildingLine" />
+        <b>{{ displayOrg }}</b>
+      </span>
+      <button type="button" @click="orgVisible = true">
+        <IconifyIconOffline :icon="SwapLine" />
+        切换
+      </button>
+      <span class="cq-separator">|</span>
+      <button type="button">
+        <IconifyIconOffline :icon="HomeLine" />
+        部门首页
+      </button>
+      <span class="cq-separator">|</span>
+      <button type="button" @click="profileVisible = true">
+        <IconifyIconOffline :icon="ProfileLine" />
+        个人信息
+      </button>
+      <span class="cq-separator">|</span>
+      <button type="button" @click="logout">
+        <IconifyIconOffline :icon="LogoutLine" />
+        退出
+      </button>
+    </nav>
+
+    <el-dialog v-model="orgVisible" title="单位切换" width="420px">
+      <el-radio-group model-value="cost-center" class="cq-dialog-options">
+        <el-radio value="cost-center">长庆油田分公司</el-radio>
+        <el-radio value="project-office">项目管理办公室</el-radio>
+      </el-radio-group>
+      <template #footer>
+        <el-button type="primary" @click="orgVisible = false">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="profileVisible" title="个人信息" width="420px">
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="用户">
+          {{ displayUsername }}
+        </el-descriptions-item>
+        <el-descriptions-item label="单位">
+          {{ displayOrg }}
+        </el-descriptions-item>
+        <el-descriptions-item label="角色">系统管理员</el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button type="primary" @click="profileVisible = false">
+          关闭
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.navbar {
-  width: 100%;
-  height: 48px;
-  overflow: hidden;
-
-  .hamburger-container {
-    float: left;
-    height: 100%;
-    line-height: 48px;
-    cursor: pointer;
-  }
-
-  .vertical-header-right {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    min-width: 280px;
-    height: 48px;
-    color: #000000d9;
-
-    .el-dropdown-link {
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      height: 48px;
-      padding: 10px;
-      color: #000000d9;
-      cursor: pointer;
-
-      p {
-        font-size: 14px;
-      }
-
-      img {
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-      }
-    }
-  }
-
-  .breadcrumb-container {
-    float: left;
-    margin-left: 16px;
-  }
-}
-
-.logout {
-  width: 120px;
-
-  ::v-deep(.el-dropdown-menu__item) {
-    display: inline-flex;
-    flex-wrap: wrap;
-    min-width: 100%;
-  }
-}
-</style>

@@ -1,137 +1,91 @@
 <script setup lang="ts">
-import { useRoute } from "vue-router";
-import { emitter } from "@/utils/mitt";
-import { useNav } from "@/layout/hooks/useNav";
-import { responsiveStorageNameSpace } from "@/config";
-import { storageLocal, isAllEmpty } from "@pureadmin/utils";
-import { findRouteByPath, getParentPaths } from "@/router/utils";
-import { usePermissionStoreHook } from "@/store/modules/permission";
-import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
-import LaySidebarLogo from "../lay-sidebar/components/SidebarLogo.vue";
-import LaySidebarItem from "../lay-sidebar/components/SidebarItem.vue";
-import LaySidebarLeftCollapse from "../lay-sidebar/components/SidebarLeftCollapse.vue";
-import LaySidebarCenterCollapse from "../lay-sidebar/components/SidebarCenterCollapse.vue";
+import { computed, ref, watch } from "vue";
+import { useCostMenu } from "@/layout/hooks/useCostMenu";
+import type { CostMenuItem } from "@/layout/cost-menu";
+import ArrowRight from "~icons/ri/arrow-right-s-line";
+import FolderLine from "~icons/ri/folder-2-line";
+import FileList from "~icons/ri/file-list-3-line";
 
-const route = useRoute();
-const isShow = ref(false);
-const showLogo = ref(
-  storageLocal().getItem<StorageConfigs>(
-    `${responsiveStorageNameSpace()}configure`
-  )?.showLogo ?? true
-);
+const { activeTopMenu, activeSideCode, leftMenus, pushMenu } = useCostMenu();
+const opened = ref<Record<string, boolean>>({});
 
-const {
-  device,
-  pureApp,
-  isCollapse,
-  tooltipEffect,
-  menuSelect,
-  toggleSideBar
-} = useNav();
+const hasMenu = computed(() => leftMenus.value.length > 0);
 
-const subMenuData = ref([]);
+function isActive(menu: CostMenuItem) {
+  return activeSideCode.value === menu.code;
+}
 
-const menuData = computed(() => {
-  return pureApp.layout === "mix" && device.value !== "mobile"
-    ? subMenuData.value
-    : usePermissionStoreHook().wholeMenus;
-});
+function toggle(menu: CostMenuItem) {
+  if (menu.children?.length) {
+    opened.value[menu.code] = !opened.value[menu.code];
+    return;
+  }
+  pushMenu(menu);
+}
 
-const loading = computed(() =>
-  pureApp.layout === "mix" ? false : menuData.value.length === 0 ? true : false
-);
-
-const defaultActive = computed(() =>
-  !isAllEmpty(route.meta?.activePath) ? route.meta.activePath : route.path
-);
-
-function getSubMenuData() {
-  let path = "";
-  path = defaultActive.value;
-  subMenuData.value = [];
-  // path的上级路由组成的数组
-  const parentPathArr = getParentPaths(
-    path,
-    usePermissionStoreHook().wholeMenus
-  );
-  // 当前路由的父级路由信息
-  const parenetRoute = findRouteByPath(
-    parentPathArr[0] || path,
-    usePermissionStoreHook().wholeMenus
-  );
-  if (!parenetRoute?.children) return;
-  subMenuData.value = parenetRoute?.children;
+function openParents(items: CostMenuItem[]) {
+  for (const item of items) {
+    if (item.children?.some(child => child.code === activeSideCode.value)) {
+      opened.value[item.code] = true;
+    }
+    if (item.children) openParents(item.children);
+  }
 }
 
 watch(
-  () => [route.path, usePermissionStoreHook().wholeMenus],
+  () => [activeTopMenu.value?.code, activeSideCode.value],
   () => {
-    if (route.path.includes("/redirect")) return;
-    getSubMenuData();
-    menuSelect(route.path);
-  }
+    opened.value = {};
+    openParents(leftMenus.value);
+  },
+  { immediate: true }
 );
-
-onMounted(() => {
-  getSubMenuData();
-
-  emitter.on("logoChange", key => {
-    showLogo.value = key;
-  });
-});
-
-onBeforeUnmount(() => {
-  // 解绑`logoChange`公共事件，防止多次触发
-  emitter.off("logoChange");
-});
 </script>
 
 <template>
-  <div
-    v-loading="loading"
-    :class="['sidebar-container', showLogo ? 'has-logo' : 'no-logo']"
-    @mouseenter.prevent="isShow = true"
-    @mouseleave.prevent="isShow = false"
-  >
-    <LaySidebarLogo v-if="showLogo" :collapse="isCollapse" />
-    <el-scrollbar
-      wrap-class="scrollbar-wrapper"
-      :class="[device === 'mobile' ? 'mobile' : 'pc']"
-    >
-      <el-menu
-        unique-opened
-        mode="vertical"
-        popper-class="pure-scrollbar"
-        class="outer-most select-none"
-        :collapse="isCollapse"
-        :collapse-transition="false"
-        :popper-effect="tooltipEffect"
-        :default-active="defaultActive"
-      >
-        <LaySidebarItem
-          v-for="routes in menuData"
-          :key="routes.path"
-          :item="routes"
-          :base-path="routes.path"
-          class="outer-most select-none"
-        />
-      </el-menu>
-    </el-scrollbar>
-    <LaySidebarCenterCollapse
-      v-if="device !== 'mobile' && (isShow || isCollapse)"
-      :is-active="pureApp.sidebar.opened"
-      @toggleClick="toggleSideBar"
-    />
-    <LaySidebarLeftCollapse
-      v-if="device !== 'mobile'"
-      :is-active="pureApp.sidebar.opened"
-      @toggleClick="toggleSideBar"
-    />
-  </div>
-</template>
+  <aside class="sidebar-container cq-sidebar-nav">
+    <div class="cq-side-title">{{ activeTopMenu?.title || "业务菜单" }}</div>
 
-<style scoped>
-:deep(.el-loading-mask) {
-  opacity: 0.45;
-}
-</style>
+    <el-scrollbar class="cq-side-scroll">
+      <div v-if="hasMenu" class="cq-side-tree">
+        <div v-for="menu in leftMenus" :key="menu.code" class="cq-side-node">
+          <button
+            type="button"
+            class="cq-side-item is-parent"
+            :class="{ active: isActive(menu), open: opened[menu.code] }"
+            @click="toggle(menu)"
+          >
+            <IconifyIconOffline :icon="FolderLine" />
+            <span>{{ menu.title }}</span>
+            <IconifyIconOffline
+              v-if="menu.children?.length"
+              class="cq-side-arrow"
+              :icon="ArrowRight"
+            />
+          </button>
+
+          <div v-if="menu.children?.length" v-show="opened[menu.code]">
+            <button
+              v-for="child in menu.children"
+              :key="child.code"
+              type="button"
+              class="cq-side-item is-child"
+              :class="{ active: isActive(child) }"
+              @click="pushMenu(child)"
+            >
+              <IconifyIconOffline :icon="FileList" />
+              <span>{{ child.title }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <el-empty
+        v-else
+        description="该模块暂无菜单"
+        :image-size="72"
+        class="cq-side-empty"
+      />
+    </el-scrollbar>
+  </aside>
+</template>
