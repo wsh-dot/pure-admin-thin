@@ -53,6 +53,10 @@ declare global {
     dynamicLevel?: number;
     /** 当前页面是否隐藏布局页脚 `可选` */
     hideFooter?: boolean;
+    /** 长庆布局顶部一级菜单编码 `可选` */
+    topMenuCode?: string;
+    /** 长庆布局左侧叶子菜单编码 `可选` */
+    sideMenuCode?: string;
     /** 将某个菜单激活
      * （主要用于通过`query`或`params`传参的路由，当它们通过配置`showLink: false`后不在菜单中显示，就不会有任何菜单高亮，
      * 而通过设置`activePath`指定激活菜单即可获得高亮，`activePath`为指定激活菜单的`path`）
