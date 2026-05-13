@@ -59,7 +59,48 @@ export const costMenus: CostMenuItem[] = [
   },
   { code: "evaluation", title: "考评管理", children: [] },
   { code: "business", title: "业务交流", children: [] },
-  { code: "system", title: "系统管理", children: [] }
+  {
+    code: "system",
+    title: "系统管理",
+    children: [
+      {
+        code: "user-org",
+        title: "用户机构管理",
+        path: "/cost/system/user-org",
+        auths: ["system_userOrg_view_permission"]
+      },
+      {
+        code: "resource",
+        title: "资源管理",
+        path: "/cost/system/resource",
+        auths: ["system_resource_view_permission"]
+      },
+      {
+        code: "permission",
+        title: "权限管理",
+        path: "/cost/system/permission",
+        auths: ["system_permission_edit_permission"]
+      },
+      {
+        code: "role",
+        title: "角色管理",
+        path: "/cost/system/role",
+        auths: ["system_role_view_permission"]
+      },
+      {
+        code: "menu",
+        title: "菜单管理",
+        path: "/cost/system/menu",
+        auths: ["system_menu_view_permission"]
+      },
+      {
+        code: "log",
+        title: "日志管理",
+        path: "/cost/system/log",
+        auths: ["system_operationLog_menu_permission"]
+      }
+    ]
+  }
 ];
 
 export function findFirstLeaf(menu?: CostMenuItem): CostMenuItem | undefined {
